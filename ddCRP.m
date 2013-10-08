@@ -2,7 +2,8 @@ function [map_z stats] = ddCRP(subject, experiment, num_passes, ...
                                alpha, kappa, nu, sigsq)
 
 hyp = [kappa nu sigsq];
-stats = struct('times',[],'lp',[],'NMI',[],'K',[], 'conn_diff',zeros(0,4));
+stats = struct('times',[],'lp',[],'NMI',[],'K',[], ...
+               'conn_diff', zeros(0,4), 'gt_lp', []);
 
 loaded = load(['../data/' subject '/' experiment '.mat']);
 D = loaded.D;
@@ -50,8 +51,9 @@ for pass = 1:num_passes
         stats.lp = [stats.lp curr_lp];
         stats.K = [stats.K K];
         if (~isempty(gt_z))
-            stats.NMI = [stats.NMI CalcNMI(gt_z,MAPz)];
+            stats.NMI = [stats.NMI CalcNMI(gt_z, map_z)];
             if (abs(stats.NMI(end)-1)<10^(-8))
+                %stats.gt_lp = 
                 return;
             end
         end
@@ -70,7 +72,8 @@ for pass = 1:num_passes
         [K_rem, z_rem, parcels_rem] = ConnectedComp(G);
         if (K_rem ~= K)
             rem_delta_lp = rem_delta_lp - ...
-                      LikelihoodDiff(parcels_rem, z_rem(i), z_rem(c(i)),...
+                      LikelihoodDiff(D, ...
+                                     parcels_rem, z_rem(i), z_rem(c(i)),...
                                      parcels, z(i), hyp);
         end
         
@@ -79,13 +82,14 @@ for pass = 1:num_passes
         for n_ind = 1:length(adj_list{i})
             n = adj_list{i}(n_ind);
             c(i) = n;
-            G_n = sparse(1:N,c,1,N,N);
+            G_n = sparse(1:nvox,c,1,nvox,nvox);
             [K_n, z_n, parcels_n] = ConnectedComp(G_n);
             if (K_n == K_rem)
                 continue;
             end
             
-            lp(n_ind) = LikelihoodDiff(parcels_rem, z_rem(i), z_rem(n), ...
+            lp(n_ind) = LikelihoodDiff(D, ...
+                                       parcels_rem, z_rem(i), z_rem(n), ...
                                        parcels_n, z_n(i), hyp);
         end
         
@@ -107,8 +111,8 @@ function [K, z, parcels] = ConnectedComp(G)
     parcels = arrayfun(@(x) find(z==x), 1:K, 'UniformOutput', false);
 end
 
-function ld = LikelihoodDiff(parcels_split, split_i1, split_i2, ...
-                             parcels_merge, merge_i, hyp)
+function ld = LikelihoodDiff(D, parcels_split, split_i1, split_i2, ...
+                                parcels_merge, merge_i, hyp)
     split_ll = 0;
     for i = 1:length(parcels_split)
         split_ll = split_ll + ...
