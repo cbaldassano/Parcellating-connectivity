@@ -1,9 +1,7 @@
 function [map_z stats] = ddCRP(subject, experiment, num_passes, ...
-                               alpha, kappa, nu, sigsq, plot_interval)
+                               alpha, kappa, nu, sigsq, stats_interval)
 
 hyp = ComputeCachedLikelihoodTerms(kappa, nu, sigsq);
-stats = struct('times',[],'lp',[],'NMI',[],'K',[], ...
-               'conn_diff', zeros(0,4), 'gt_lp', []);
 
 loaded = load(['../data/' subject '/' experiment '.mat']);
 D = loaded.D;
@@ -25,7 +23,6 @@ else
 end
 clear loaded;
 
-
 c = const_c;
 for i = find(const_c==0)'
     c(i) = adj_list{i}(randi(length(adj_list{i})));
@@ -35,8 +32,12 @@ G = sparse(1:nvox,c,1,nvox,nvox);
 [K, z, parcels] = ConnectedComp(G);
 curr_lp = FullProbabilityddCRP(D, c, parcels, alpha, hyp);
 
+
+stats = struct('times',[],'lp',[],'NMI',[],'K',[], ...
+               'conn_diff', zeros(0,4), 'z', zeros(0,nvox));
 max_lp = -Inf;
 t0 = cputime;
+steps = 0;
 for pass = 1:num_passes
     nonconst_vox = find(const_c==0);
     order = nonconst_vox(randperm(length(nonconst_vox)))';
@@ -47,14 +48,19 @@ for pass = 1:num_passes
             map_z = z;
         end
         
-        stats.times = [stats.times (cputime-t0)];
-        stats.lp = [stats.lp curr_lp];
-        stats.K = [stats.K K];
-        if (~isempty(gt_z))
-            stats.NMI = [stats.NMI CalcNMI(gt_z, map_z)];
-            if (abs(stats.NMI(end)-1)<10^(-8))
-                %stats.gt_lp = 
-                return;
+        if (mod(steps, stats_interval) == 0)
+            stats.times = [stats.times (cputime-t0)];
+            stats.lp = [stats.lp curr_lp];
+            stats.K = [stats.K K];
+            stats.z = [stats.z; z];
+            disp(['Step: ' num2str(steps) ...
+                  '  Time: ' num2str(cputime-t0) ...
+                  '  LP: ' num2str(curr_lp)]);
+            if (~isempty(gt_z))
+                stats.NMI = [stats.NMI CalcNMI(gt_z, map_z)];
+                if (abs(stats.NMI(end)-1) < 10^(-8))
+                    return;
+                end
             end
         end
         
@@ -63,32 +69,6 @@ for pass = 1:num_passes
                                CalcPPAConnDiff(z, labels, coords, bold)];
         end
         
-        if (plot_interval > 0 && ...
-                              mod(length(stats.times), plot_interval) == 1)
-            if (~isempty(gt_z))
-                subplot(3,1,1);
-                plot(stats.times,stats.lp); title('Log Prob');
-                subplot(3,1,2);
-                plot(stats.times,stats.K); title('Num Supervoxels');
-                subplot(3,1,3);
-                plot(stats.times,stats.NMI); title('NMI');
-            elseif (strcmp(experiment,'PPA'))
-                subplot(3,1,1);
-                plot(stats.times,stats.lp); title('Log Prob');
-                subplot(3,1,2);
-                plot(stats.times,stats.K); title('Num Supervoxels');
-                subplot(3,1,3);
-                plot(stats.times,stats.conn_diff); title('Conn Diff');
-                legend('LOC','TOS','RSC','IPL');
-            else
-                subplot(2,1,1);
-                plot(stats.times,stats.lp); title('Log Prob');
-                subplot(2,1,2);
-                plot(stats.times,stats.K); title('Num Supervoxels');
-            end
-            pause(0.1);
-                
-        end
         if (c(i) == i)
             rem_delta_lp = -log(alpha);
             K_rem = K; z_rem = z; parcels_rem = parcels;
@@ -135,8 +115,18 @@ for pass = 1:num_passes
         curr_lp = curr_lp + rem_delta_lp + lp(new_neighbor);
         G(i,c(i)) = 1;
         [K, z, parcels] = ConnectedComp(G);
+        steps = steps + 1;
     end
 end
+
+stats.times = [stats.times (cputime-t0)];
+stats.lp = [stats.lp curr_lp];
+stats.K = [stats.K K];
+stats.z = [stats.z; z];
+if (~isempty(gt_z))
+    stats.NMI = [stats.NMI CalcNMI(gt_z, map_z)];
+end
+
 end
 
 function [K, z, parcels] = ConnectedComp(G)
