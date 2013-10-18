@@ -1,8 +1,8 @@
 function [map_z stats] = ddCRP(subject, experiment, num_passes, ...
-                               alpha, kappa, nu, sigsq, stats_interval)
+                               alpha, kappa, nu, sigsq, stats_interval, verbose)
 
 hyp = ComputeCachedLikelihoodTerms(kappa, nu, sigsq);
-
+pid = randi(10000);
 loaded = load(['../data/' subject '/' experiment '.mat']);
 D = loaded.D;
 adj_list = loaded.adj_list;
@@ -49,19 +49,7 @@ for pass = 1:num_passes
         end
         
         if (mod(steps, stats_interval) == 0)
-            stats.times = [stats.times (cputime-t0)];
-            stats.lp = [stats.lp curr_lp];
-            stats.K = [stats.K K];
-            stats.z = [stats.z; z];
-            disp(['Step: ' num2str(steps) ...
-                  '  Time: ' num2str(cputime-t0) ...
-                  '  LP: ' num2str(curr_lp)]);
-            if (~isempty(gt_z))
-                stats.NMI = [stats.NMI CalcNMI(gt_z, map_z)];
-                if (abs(stats.NMI(end)-1) < 10^(-8))
-                    return;
-                end
-            end
+            stats = UpdateStats(stats, t0, curr_lp, K, z, steps, gt_z, map_z, pid, verbose);
         end
         
         if (strcmp(experiment,'PPA'))
@@ -119,13 +107,7 @@ for pass = 1:num_passes
     end
 end
 
-stats.times = [stats.times (cputime-t0)];
-stats.lp = [stats.lp curr_lp];
-stats.K = [stats.K K];
-stats.z = [stats.z; z];
-if (~isempty(gt_z))
-    stats.NMI = [stats.NMI CalcNMI(gt_z, map_z)];
-end
+stats = UpdateStats(stats, t0, curr_lp, K, z, steps, gt_z, map_z, pid, verbose);
 
 end
 
@@ -193,4 +175,21 @@ function ld = LikelihoodDiff(D, parcels_split, split_i1, split_i2, ...
     merge_ll = LogLikelihood(merge_stats, hyp);
     
     ld = merge_ll - split_ll;
+end
+
+function stats = UpdateStats(stats, t0, curr_lp, K, z, steps, gt_z, map_z, pid, verbose)
+    stats.times = [stats.times (cputime-t0)];
+    stats.lp = [stats.lp curr_lp];
+    stats.K = [stats.K K];
+    stats.z = [stats.z; z];
+    if (verbose)
+        disp(['Step: ' num2str(steps) ...
+              '  Time: ' num2str(cputime-t0) ...
+              '  LP: ' num2str(curr_lp)]);
+    end
+    if (~isempty(gt_z))
+        stats.NMI = [stats.NMI CalcNMI(gt_z, map_z)];
+    end
+    save(['/data/supervoxel/output/temp/' num2str(pid) '.mat'], ...
+        'map_z', 'stats');
 end

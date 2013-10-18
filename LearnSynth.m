@@ -50,7 +50,7 @@ for noise_ind = 1:num_noise
         rng(seed);
         [~,stats] = ddCRP('synth', ...
             [type '_' num2str(synth_sigsq(noise_ind))], pass_limit, ...
-            alpha, kappa, nu, sigsq, 0);
+            alpha, kappa, nu, sigsq, 1000, 0);
         DC_stats{noise_ind,seed} = stats;
     end
     

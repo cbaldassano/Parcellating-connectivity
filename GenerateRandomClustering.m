@@ -1,4 +1,4 @@
-function z = GenerateRandomClustering( adj_list, K )
+function [z c] = GenerateRandomClustering( adj_list, K )
 
     N = length(adj_list);
     z = 1:N;
@@ -12,7 +12,6 @@ function z = GenerateRandomClustering( adj_list, K )
         end
     end
 
-
     zRelabel = zeros(N,1);
     relabelInd = 1;
     for v=unique(z)
@@ -20,5 +19,6 @@ function z = GenerateRandomClustering( adj_list, K )
         relabelInd = relabelInd+1;
     end
     z = zRelabel;
+    c = ClusterSpanningTrees(z, adj_list);
 end
 
