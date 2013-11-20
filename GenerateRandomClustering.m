@@ -1,13 +1,21 @@
-function [z c] = GenerateRandomClustering( adj_list, K )
+function [z c] = GenerateRandomClustering( adj_list, K, z_init)
 
     N = length(adj_list);
-    z = 1:N;
-    K_curr = N;
+    if (nargin < 3)
+        merge_vox = 1:N;
+        K_curr = N;
+        z = 1:N;
+    else
+        z = z_init;
+        merge_vox = find(z_init==0);
+        K_curr = length(merge_vox);
+        z(merge_vox) = (max(z_init)+1):(max(z_init)+K_curr);
+    end
     while (K_curr > K)
-        if (mod(K_curr, 1000) == 0)
-            disp(K_curr);
-        end
-        clustLabels = unique(z);
+%         if (mod(K_curr, 100) == 0)
+%             disp(K_curr);
+%         end
+        clustLabels = unique(z(merge_vox));
         zToMerge = clustLabels(randi(length(clustLabels),1));
         mergeChoices = unique(z([adj_list{z==zToMerge}]));
         mergeChoices = setdiff(mergeChoices,zToMerge);

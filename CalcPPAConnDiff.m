@@ -10,8 +10,8 @@ for side = 1:2
 
     [~,ant_ind] = max(meanY);
     aPPA(side) = hem_clusts(ant_ind);
-    [~,pPPA(pos_ind)] = min(meanY);
-    pPPA(side) = hem_clusts(pPPA(pos_ind));
+    [~,pos_ind] = min(meanY);
+    pPPA(side) = hem_clusts(pos_ind);
 end
 
 LOC_bold = mean(bold(labels==1 | labels==2,:),1);
@@ -31,5 +31,7 @@ pPPA_conn = [corr2(pPPA_bold,LOC_bold) ...
              corr2(pPPA_bold,IPL_bold)];
 
 conn_diff = pPPA_conn - aPPA_conn;
+
+
 end
 

@@ -1,4 +1,7 @@
-function var_exp = CalcVarianceExplained(D, bins)
+function var_exp = CalcVarianceExplained(D, z)
+
+[sorted_z, sorted_i] = sort(z);
+bins = mat2cell(sorted_i, 1, diff(find(diff([0 sorted_z (max(z)+1)]))));
 
 est_D = zeros(size(D));
 for i=1:length(bins)

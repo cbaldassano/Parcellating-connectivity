@@ -53,7 +53,7 @@ for pass = 1:num_passes
         end
         
         if (strcmp(experiment,'PPA'))
-            stats.conn_diff = [conn_diff; ...
+            stats.conn_diff = [stats.conn_diff; ...
                                CalcPPAConnDiff(z, labels, coords, bold)];
         end
         
