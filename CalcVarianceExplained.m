@@ -5,6 +5,7 @@ bins = mat2cell(sorted_i, 1, diff(find(diff([0 sorted_z (max(z)+1)]))));
 
 est_D = zeros(size(D));
 for i=1:length(bins)
+    disp(num2str(i));
     for j=1:length(bins)
         x = D(bins{i},bins{j});
         if (i==j)

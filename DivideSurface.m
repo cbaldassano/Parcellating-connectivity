@@ -63,22 +63,22 @@ for hem = 1:2
             end
         end
         fclose(fid);
+        fprintf(fid_sizelist, '%d, ', 9*size(parcel_overlay,1));
         [~,filename] = fileparts([save_prefix '_' num2str(hem) '_' num2str(i)]);
         fprintf(fid_filelist, '''%s'', ', filename);
-        fprintf(fid_sizelist, '%d, ', 9*size(parcel_overlay,1));
         
-%         verts = unique(parcel_tri(:));
-%         inverse_ind = zeros(32492,1);
-%         inverse_ind(verts) = 1:length(verts);
-%         parcel_tri = cast(permute(inverse_ind(parcel_tri) - 1, [2 1]), 'int32');
-%         parcel_coords = permute(coords{hem}(verts, :), [2 1]);
-%         
-%         fid = fopen([save_prefix '_' num2str(hem) '_' num2str(i) '.gii'], 'w');
-%         fprintf(fid, template_xml, ...
-%             size(parcel_coords,2), base64encode(dzip(typecast(parcel_coords(:), 'uint8'))), ...
-%             size(parcel_tri,2), base64encode(dzip(typecast(parcel_tri(:), 'uint8'))));
-%         fclose(fid);
-%         system(['mris_convert ' save_prefix '_' num2str(hem) '_' num2str(i) '.gii ' save_prefix '_' num2str(hem) '_' num2str(i) '.fsm']);
+        verts = unique(parcel_tri(:));
+        inverse_ind = zeros(32492,1);
+        inverse_ind(verts) = 1:length(verts);
+        parcel_tri = cast(permute(inverse_ind(parcel_tri) - 1, [2 1]), 'int32');
+        parcel_coords = permute(coords{hem}(verts, :), [2 1]);
+        
+        fid = fopen([save_prefix '_' num2str(hem) '_' num2str(i) '.gii'], 'w');
+        fprintf(fid, template_xml, ...
+            size(parcel_coords,2), base64encode(dzip(typecast(parcel_coords(:), 'uint8'))), ...
+            size(parcel_tri,2), base64encode(dzip(typecast(parcel_tri(:), 'uint8'))));
+        fclose(fid);
+        system(['mris_convert ' save_prefix '_' num2str(hem) '_' num2str(i) '.gii ' save_prefix '_' num2str(hem) '_' num2str(i) '.fsm']);
     end
 end
 
