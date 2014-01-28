@@ -1,23 +1,9 @@
-function [z stats] = LocalSimilarity(subject, experiment, n_clust)
+function z = LocalSimilarity(D, adj_list, n_clust, vox_to_clust)
+if (nargin < 4)
+    vox_to_clust = 1:size(D,1);
+end
 
-stats = struct('NMI',[], 'conn_diff',[]);
-loaded = load(['../data/' subject '/' experiment '.mat']);
-D = loaded.D;
-adj_list = loaded.adj_list;
-coords = loaded.coords;
 N = size(D,1);
-
-if (strcmp(experiment, 'PPA'))
-    labels = loaded.labels;
-    bold = loaded.bold;
-end
-if (strcmp(subject, 'synth'))
-    gt_z = loaded.z;
-else
-    gt_z = [];
-end
-clear loaded;
-
 W = inf(size(D));
 for i = 1:size(D,1)
     for j = adj_list{i}
@@ -26,19 +12,8 @@ for i = 1:size(D,1)
     end
 end
 
-if (~strcmp(experiment, 'PPA'))
-    z = ThresholdSimilarity(W, n_clust);
-    stats.NMI = CalcNMI(gt_z, z);
-else
-    z = zeros(size(D,1),1);
-    for side=1:2
-        sideW = W(labels==(side+8),labels==(side+8));
-        sidez = ThresholdSimilarity(sideW, n_clust);
-        z(labels==(side+8)) = sidez + n_clust*(side-1);
-    end
-    
-    stats.conn_diff = CalcPPAConnDiff(z, labels, coords, bold);
-end
+
+z = ThresholdSimilarity(W(vox_to_clust,vox_to_clust), n_clust);
 end
 
 function z = ThresholdSimilarity(W, n_clust)
