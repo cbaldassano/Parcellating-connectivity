@@ -36,45 +36,46 @@ for noise_ind = 1:num_noise
     gt_z = loaded.z;
     clear loaded;
     
-    disp('   Local Similarity');
-    z = LocalSimilarity(D, adj_list, n_clust);
-    LS(noise_ind) = CalcNMI(gt_z, z);
+%     disp('   Local Similarity');
+%     z = LocalSimilarity(D, adj_list, n_clust);
+%     LS(noise_ind) = CalcNMI(gt_z, z);
     
     disp('   Ward Clustering');
     z = WardClustering(D, adj_list, n_clust);
-    WC(noise_ind) = CalcNMI(gt_z, z);
+    WC(noise_ind) = CalcNMI(gt_z, z)
     
-    disp('   Normalized Cut');
-    z = NormCut(D, adj_list, n_clust);
-    NC(noise_ind) = CalcNMI(gt_z, z);
-    
-    disp('   Region Growing');
-    addpath('reggrow');
-    max_adj = max(cellfun(@length,adj_list));
-    padded_adj_list = cellfun(@(x) [x zeros(1,max_adj-length(x))], ...
-        adj_list, 'UniformOutput', false);
-    z = t_reggrow_main(D, cell2mat(padded_adj_list), [coords zeros(size(D,1),1)], n_clust);
-    RG(noise_ind) = CalcNMI(gt_z, z);
-    
-    disp('   ddCRP');
-    parfor seed = 1:seeds
-        disp(['     Seed ' num2str(seed)]);
-        rng(seed);
-        [~,stats] = ddCRP('synth', subject, ...
-            pass_limit, alpha, kappa, nu, sigsq, 1000, 0);
-        DC_stats{noise_ind,seed} = stats;
-    end
-    
-    max_lp = -inf;
-    for seed = 1:seeds
-        if (DC_stats{noise_ind, seed}.lp(end) > max_lp)
-            max_lp = DC_stats{noise_ind, seed}.lp(end);
-            max_lp_seed = seed;
-        end
-    end
-    DC(noise_ind) = DC_stats{noise_ind, max_lp_seed}.NMI(end);
+%     disp('   Normalized Cut');
+%     z = NormCut(D, adj_list, n_clust);
+%     NC(noise_ind) = CalcNMI(gt_z, z);
+%     
+%     disp('   Region Growing');
+%     addpath('reggrow');
+%     addpath('reggrow/hlpfunc');
+%     max_adj = max(cellfun(@length,adj_list));
+%     padded_adj_list = cellfun(@(x) [x zeros(1,max_adj-length(x))], ...
+%         adj_list, 'UniformOutput', false);
+%     z = t_reggrow_main(D, cell2mat(padded_adj_list), [coords zeros(size(D,1),1)], n_clust);
+%     RG(noise_ind) = CalcNMI(gt_z, z);
+%     
+%     disp('   ddCRP');
+%     parfor seed = 1:seeds
+%         disp(['     Seed ' num2str(seed)]);
+%         rng(seed);
+%         [~,stats] = ddCRP('synth', experiment, ...
+%             pass_limit, alpha, kappa, nu, sigsq, 1000, 0);
+%         DC_stats{noise_ind,seed} = stats;
+%     end
+%     
+%     max_lp = -inf;
+%     for seed = 1:seeds
+%         if (DC_stats{noise_ind, seed}.lp(end) > max_lp)
+%             max_lp = DC_stats{noise_ind, seed}.lp(end);
+%             max_lp_seed = seed;
+%         end
+%     end
+%     DC(noise_ind) = DC_stats{noise_ind, max_lp_seed}.NMI(end);
 end
 
-save(['../output/synth/' type '.mat'], 'synth_sigsq','LS', 'NC', 'WC', 'RG', 'DC','DC_stats');
+%save(['../output/synth/' type '.mat'], 'synth_sigsq','LS', 'NC', 'WC', 'RG', 'DC','DC_stats');
 end
 

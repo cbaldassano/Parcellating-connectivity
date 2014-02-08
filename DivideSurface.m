@@ -3,13 +3,18 @@ function DivideSurface(midthickness_files, surface_template_file, z, orig_ind, o
 [sorted_z, sorted_i] = sort(z);
 parcels = mat2cell(sorted_i, 1, diff(find(diff([0 sorted_z (max(z)+1)]))));
 orig_parcels = cell(2,1);
+fid_filelist = fopen([save_prefix '_flist.txt'], 'w');
 for i = 1:length(parcels)
     if (parcels{i}(1) <= 29696)
         orig_parcels{1} = [orig_parcels{1} {orig_ind{1}(parcels{i})}];
+        [~,filename] = fileparts([save_prefix '_1_' num2str(length(orig_parcels{1}))]);
     else
         orig_parcels{2} = [orig_parcels{2} {orig_ind{2}(parcels{i} - 29696)}];
+        [~,filename] = fileparts([save_prefix '_2_' num2str(length(orig_parcels{2}))]);
     end
+    fprintf(fid_filelist, '''%s'', ', filename);
 end
+fclose(fid_filelist);
 
 max_overlay = max(max(overlay{1}),max(overlay{2}));
 colors = rand(max_overlay + 2, 3);
@@ -21,7 +26,6 @@ fid = fopen(surface_template_file);
 template_xml = fread(fid,'*char')';
 fclose(fid);
 
-fid_filelist = fopen([save_prefix '_flist.txt'], 'w');
 fid_sizelist = fopen([save_prefix '_slist.txt'], 'w');
 coords = cell(2,1);
 tri = cell(2,1);
@@ -64,8 +68,7 @@ for hem = 1:2
         end
         fclose(fid);
         fprintf(fid_sizelist, '%d, ', 9*size(parcel_overlay,1));
-        [~,filename] = fileparts([save_prefix '_' num2str(hem) '_' num2str(i)]);
-        fprintf(fid_filelist, '''%s'', ', filename);
+        
         
         verts = unique(parcel_tri(:));
         inverse_ind = zeros(32492,1);
@@ -82,7 +85,6 @@ for hem = 1:2
     end
 end
 
-fclose(fid_filelist);
 fclose(fid_sizelist);
 end
 

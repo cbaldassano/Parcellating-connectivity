@@ -44,7 +44,7 @@ CMAT=sparse(lfX,ldat);
 MAX_N=zeros(lfX,1);
 MAX_C=zeros(lfX,1);
 
-lfX
+%lfX
 for ctr2=1:lfX
     nbrs=NB(CLUSTS(ctr2,1:cl(ctr2)),:);
     nbrs=nbrs(:)';
@@ -131,10 +131,10 @@ elseif strcmp(use_dist,'fast')
        % if ctr/size(Data,2)>CUT
        %     CUT=CUT+0.01;
 
-            percent_done = ctr/size(Data,2)
+            percent_done = ctr/size(Data,2);
             if ctr>0
-                time_run     = time_run+toc/60
-                approx_time_to_go   = time_run/percent_done-time_run
+                time_run     = time_run+toc/60;
+                approx_time_to_go   = time_run/percent_done-time_run;
             end
             tic
         %end

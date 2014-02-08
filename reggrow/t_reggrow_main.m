@@ -20,7 +20,7 @@ filtwidth=1;
 
 %% FIND ROI STRUCTURE
 
-display(['Defining ROIs of radius 1mm, 2mm, 3mm'])
+%display(['Defining ROIs of radius 1mm, 2mm, 3mm'])
 ROI1mm  = zeros(size(NBRS));
 ROI2mm  = zeros(size(NBRS));
 ROI3mm  = zeros(size(NBRS));
@@ -36,7 +36,7 @@ nroi3 = zeros(size(ROI3mm,1),1);
 tic
 for ctr=1:size(ROI3mm,1)
     if rem(ctr,1000)==0
-        display(['ROI definition iteration: ' num2str(ctr)])
+        %display(['ROI definition iteration: ' num2str(ctr)])
     end
     closeverts1 = [];
     closeverts2 = [];
@@ -93,7 +93,7 @@ for ctr=1:size(ROI3mm,1)
     %end
     %    ROI9mm(ctr,1:nroi9(ctr))=closeverts9;
 end
-toc
+%toc
 ROI1mm = [ROI1mm nroi1]; % roi = ROI(c,1:ROI(c,end)); returns roi of vertex c
 ROI2mm = [ROI2mm nroi2];
 ROI3mm = [ROI3mm nroi3];
@@ -102,7 +102,7 @@ ROI3mm = [ROI3mm nroi3];
 %% Define convolution kernal
 
 
-display('Creating convolution kernal matrix')
+%display('Creating convolution kernal matrix')
 % Create a matrix with filter weights. Once this is done, filter can be
 % applied repeatedly.
 FILT_WEIGHTS=sparse([],[],[],dx,dx, prod(size(ROI3mm)));
@@ -137,18 +137,18 @@ Data=zeros(dt,dx);
 Data(:,fM)=Data_PRE;
 
 clear Data_PRE
-display('done')
+%display('done')
 
 fM=find(Mask);
 Data=Data/norm(Data(:,fM(1)));
 
 %% Calculate ROI variance
 
-display(['Estimating ROIs variation in radius of 3mm'])
+%display(['Estimating ROIs variation in radius of 3mm'])
 ROI_var=zeros(size(ROI3mm,1),1);
 for ctr=1:length(fM)
     if rem(ctr,1000)==0
-        display(['ROI variation iteration: ' num2str(ctr)])
+        %display(['ROI variation iteration: ' num2str(ctr)])
         %figure(1);plot(ROI_var(1:c))
     end
     c   = fM(ctr);
@@ -170,7 +170,7 @@ end
 % age between edge distance and euclidean distance.
 
 %%
-display(['Averaging (spatial) data with Gaussian kernal of width 3mm'])
+%display(['Averaging (spatial) data with Gaussian kernal of width 3mm'])
 IN=ROI_var';
 fNM=find(Mask==0);
 IN(fNM)=max(IN);
