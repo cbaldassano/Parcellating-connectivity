@@ -28,8 +28,10 @@ for ctr1=fX'
          end
     end
 end
-M2=D3'*Data./(size(Data,1)-1);
-distMAT=0.5+0.5*M2;
+% CB computing correlation explicitly
+% M2=D3'*Data./(size(Data,1)-1);
+% distMAT=0.5+0.5*M2;
+distMAT = 0.5 + 0.5*corr(D3,Data);
 
 ldat=size(Data,2);
 CLUSTS=spalloc(lfX,ldat,ldat);

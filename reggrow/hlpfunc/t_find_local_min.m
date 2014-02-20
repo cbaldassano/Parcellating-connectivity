@@ -21,7 +21,7 @@ for ctr1=1:b
         min_n=min(dat(nbrs,ctr1));
         if dat(ctr2,ctr1) <= min_n
             OUT(ctr2,ctr1)=ctr3;
-            mnbrs=max(OUT(nbrs,ctr1));
+            mnbrs=max(OUT2(nbrs,ctr1)); %CB changed OUT->OUT2
             if mnbrs==0
                 OUT2(ctr2,ctr1)=ctr4;
                 OUT2(nbrs,ctr1)=ctr4;

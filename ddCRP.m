@@ -1,36 +1,32 @@
-function [map_z stats] = ddCRP(subject, experiment, num_passes, ...
-                               alpha, kappa, nu, sigsq, stats_interval, verbose)
+function [map_z stats] = ddCRP(D, adj_list, coords, ...
+                               init_c, const_c, labels, bold, gt_z, ...
+                               num_passes, alpha, kappa, nu, sigsq, ...
+                               stats_interval, verbose)
 
 hyp = ComputeCachedLikelihoodTerms(kappa, nu, sigsq);
 pid = randi(10000);
-loaded = load(['../data/' subject '/' experiment '.mat']);
-D = loaded.D;
-adj_list = loaded.adj_list;
-coords = loaded.coords;
 nvox = size(coords, 1);
 
-if (strcmp(experiment, 'PPA'))
-    const_c = loaded.const_c;
-    labels = loaded.labels;
-    bold = loaded.bold;
-else
+if (isempty(const_c))
     const_c = zeros(nvox, 1);
 end
-if (strcmp(subject, 'synth'))
-    gt_z = loaded.z;
-else
-    gt_z = [];
+
+if (isempty(init_c))
+    init_c = zeros(nvox, 1);
 end
-clear loaded;
 
 c = const_c;
 for i = find(const_c==0)'
-    c(i) = adj_list{i}(randi(length(adj_list{i})));
+    if (init_c(i) == 0)
+        c(i) = adj_list{i}(randi(length(adj_list{i})));
+    else
+        c(i) = init_c(i);
+    end
 end
 
 G = sparse(1:nvox,c,1,nvox,nvox);
 [K, z, parcels] = ConnectedComp(G);
-curr_lp = FullProbabilityddCRP(D, c, parcels, alpha, hyp);
+curr_lp = 0;%FullProbabilityddCRP(D, c, parcels, alpha, hyp);
 
 
 stats = struct('times',[],'lp',[],'NMI',[],'K',[], ...
@@ -52,7 +48,7 @@ for pass = 1:num_passes
             stats = UpdateStats(stats, t0, curr_lp, K, z, steps, gt_z, map_z, pid, verbose);
         end
         
-        if (strcmp(experiment,'PPA'))
+        if (~isempty(labels) && ~isempty(bold))
             stats.conn_diff = [stats.conn_diff; ...
                                CalcPPAConnDiff(z, labels, coords, bold)];
         end

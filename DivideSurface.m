@@ -1,4 +1,6 @@
 function DivideSurface(midthickness_files, surface_template_file, z, orig_ind, overlay, save_prefix, overlay_suffix)
+% SURF_PRE = '/data/supervoxel/data/unrelated40/surfaces/';
+%DivideSurface({[SURF_PRE 'Q1-2_R120.L.very_inflated.32k_fs_LR.surf.gii'],[SURF_PRE 'Q1-2_R120.R.very_inflated.32k_fs_LR.surf.gii']}, [SURF_PRE 'surface_template.gii'], z', orig_ind, maps, '/data/supervoxel/output/surfaces_WC_inflated/s', 'VGD');
 
 [sorted_z, sorted_i] = sort(z);
 parcels = mat2cell(sorted_i, 1, diff(find(diff([0 sorted_z (max(z)+1)]))));

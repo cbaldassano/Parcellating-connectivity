@@ -39,30 +39,34 @@ for noise_ind = 1:num_noise
 %     disp('   Local Similarity');
 %     z = LocalSimilarity(D, adj_list, n_clust);
 %     LS(noise_ind) = CalcNMI(gt_z, z);
-    
+%     
     disp('   Ward Clustering');
     z = WardClustering(D, adj_list, n_clust);
-    WC(noise_ind) = CalcNMI(gt_z, z)
-    
+    WC(noise_ind) = CalcNMI(gt_z, z);
+%     
 %     disp('   Normalized Cut');
 %     z = NormCut(D, adj_list, n_clust);
 %     NC(noise_ind) = CalcNMI(gt_z, z);
-%     
+    
 %     disp('   Region Growing');
 %     addpath('reggrow');
 %     addpath('reggrow/hlpfunc');
 %     max_adj = max(cellfun(@length,adj_list));
 %     padded_adj_list = cellfun(@(x) [x zeros(1,max_adj-length(x))], ...
 %         adj_list, 'UniformOutput', false);
-%     z = t_reggrow_main(D, cell2mat(padded_adj_list), [coords zeros(size(D,1),1)], n_clust);
+%     z = t_reggrow_main(D, cell2mat(padded_adj_list), 3*[coords zeros(size(D,1),1)], n_clust);
 %     RG(noise_ind) = CalcNMI(gt_z, z);
-%     
+     
 %     disp('   ddCRP');
 %     parfor seed = 1:seeds
-%         disp(['     Seed ' num2str(seed)]);
+%         %disp(['     Seed ' num2str(seed)]);
 %         rng(seed);
-%         [~,stats] = ddCRP('synth', experiment, ...
-%             pass_limit, alpha, kappa, nu, sigsq, 1000, 0);
+%         z = WardClustering(D, adj_list, n_clust);
+%         c = ClusterSpanningTrees(z, adj_list);
+%         [~,stats] = ddCRP(D, adj_list, coords, ...
+%                           c, [], [], [], gt_z, ...
+%                           pass_limit, alpha, kappa, nu, sigsq, ...
+%                           100, 0);
 %         DC_stats{noise_ind,seed} = stats;
 %     end
 %     
@@ -75,6 +79,7 @@ for noise_ind = 1:num_noise
 %     end
 %     DC(noise_ind) = DC_stats{noise_ind, max_lp_seed}.NMI(end);
 end
+WC
 
 %save(['../output/synth/' type '.mat'], 'synth_sigsq','LS', 'NC', 'WC', 'RG', 'DC','DC_stats');
 end
