@@ -18,10 +18,12 @@ for i = 1:length(parcels)
 end
 fclose(fid_filelist);
 
-max_overlay = max(max(overlay{1}),max(overlay{2}));
-colors = rand(max_overlay + 2, 3);
-colors(1,:) = [0 0 0];
-colors(2,:) = [1 1 1];
+% max_overlay = max(max(overlay{1}),max(overlay{2}));
+% colors = rand(max_overlay + 2, 3);
+% colors(1,:) = [0 0 0];
+% colors(2,:) = [1 1 1];
+max_overlay = 2*10^9;
+colors = jet(50);
 
 % Inspired by Guillaume Flandin <Guillaume@artefact.tk> http://www.artefact.tk/software/matlab/gifti/
 fid = fopen(surface_template_file);
@@ -64,8 +66,11 @@ for hem = 1:2
         fid = fopen([save_prefix '_' num2str(hem) '_' num2str(i) '_' overlay_suffix '.clrs'], 'w');
         for f = 1:size(parcel_overlay,1)
             for v = 1:3
-                val = parcel_overlay(f,v) + 2;
-                fprintf(fid, '%f %f %f\n', colors(val,1), colors(val,2), colors(val,3));
+%                 val = parcel_overlay(f,v) + 2;
+%                 fprintf(fid, '%f %f %f\n', colors(val,1), colors(val,2), colors(val,3));
+                
+                ind = min(round(parcel_overlay(f,v)/max_overlay*size(colors,1)) + 1, size(colors,1));
+                fprintf(fid, '%f %f %f\n', colors(ind,1), colors(ind,2), colors(ind,3));
             end
         end
         fclose(fid);

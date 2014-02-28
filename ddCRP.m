@@ -26,7 +26,7 @@ end
 
 G = sparse(1:nvox,c,1,nvox,nvox);
 [K, z, parcels] = ConnectedComp(G);
-curr_lp = 0;%FullProbabilityddCRP(D, c, parcels, alpha, hyp);
+curr_lp = FullProbabilityddCRP(D, c, parcels, alpha, hyp);
 
 
 stats = struct('times',[],'lp',[],'NMI',[],'K',[], ...
@@ -55,14 +55,13 @@ for pass = 1:num_passes
         
         if (c(i) == i)
             rem_delta_lp = -log(alpha);
-            K_rem = K; z_rem = z; parcels_rem = parcels;
+            z_rem = z; parcels_rem = parcels;
         else
             G(i,c(i)) = 0;
             [K_rem, z_rem, parcels_rem] = ConnectedComp(G);
             if (K_rem ~= K)
                 rem_delta_lp = -LikelihoodDiff(D, ...
-                                     parcels_rem, z_rem(i), z_rem(c(i)),...
-                                     parcels, z(i), hyp);
+                                  parcels_rem, z_rem(i), z_rem(c(i)), hyp);
             else
                 rem_delta_lp = 0;
             end
@@ -73,21 +72,11 @@ for pass = 1:num_passes
         lp(end) = log(alpha);
         for n_ind = 1:length(adj_list_i)
             n = adj_list_i(n_ind);
-            c_n = c;
-            c_n(i) = n;
-            G_n = sparse(1:nvox,c_n,1,nvox,nvox);
-            [K_n, z_n, parcels_n] = ConnectedComp(G_n);
-            if (K_n == K_rem)
-                continue;
-            end
-            if (all(z == z_n))
-                % We added an edge equivalent to the one removed
+            if (z_rem(n) == z_rem(c(i)))  % Clustered with old neighbor
                 lp(n_ind) = -rem_delta_lp;
-                continue;
+            elseif (z_rem(n) ~= z_rem(i))  % Not already clustered with n
+                lp(n_ind) = LikelihoodDiff(D, parcels_rem, z_rem(i), z_rem(n), hyp);
             end
-            lp(n_ind) = LikelihoodDiff(D, ...
-                                       parcels_rem, z_rem(i), z_rem(n), ...
-                                       parcels_n, z_n(i), hyp);
         end
         
         new_neighbor = ChooseFromLP(lp);
@@ -113,12 +102,10 @@ function [K, z, parcels] = ConnectedComp(G)
     parcels = mat2cell(sorted_i, 1, diff(find(diff([0 sorted_z (K+1)]))));
 end
 
-function ld = LikelihoodDiff(D, parcels_split, split_i1, split_i2, ...
-                                parcels_merge, merge_i, hyp)
-    
-    split_stats = zeros(2*length(parcels_split)-1, 3);
-    j = 1;
-    for i = 1:length(parcels_split)
+function ld = LikelihoodDiff(D, parcels_split, split_i1, split_i2, hyp)
+    K = length(parcels_split);
+    s = zeros(2*K, 3);
+    for i = 1:K
         samples = D(parcels_split{i}, parcels_split{split_i1});
         if (i == split_i1)
             samples = samples(logical(triu(ones(size(samples)),1)));
@@ -128,12 +115,11 @@ function ld = LikelihoodDiff(D, parcels_split, split_i1, split_i2, ...
         else
             samples = samples(:);
         end
-        split_stats(j,1) = length(samples);
-        split_stats(j,2) = sum(samples)/split_stats(j,1);
-        split_stats(j,3) = sum((samples-split_stats(j,2)).^2);
-        j = j+1;
+        s(i,1) = length(samples);
+        s(i,2) = sum(samples)/s(i,1);
+        s(i,3) = sum((samples-s(i,2)).^2);
     end
-    for i = 1:length(parcels_split)
+    for i = 1:K
         samples = D(parcels_split{i}, parcels_split{split_i2});
         if (i == split_i1)
             continue;
@@ -146,29 +132,36 @@ function ld = LikelihoodDiff(D, parcels_split, split_i1, split_i2, ...
         else
             samples = samples(:);
         end
-        split_stats(j,1) = length(samples);
-        split_stats(j,2) = sum(samples)/split_stats(j,1);
-        split_stats(j,3) = sum((samples-split_stats(j,2)).^2);
-        j = j+1;
+        s(i+K,1) = length(samples);
+        s(i+K,2) = sum(samples)/s(i+K,1);
+        s(i+K,3) = sum((samples-s(i+K,2)).^2);
     end
-    split_ll = LogLikelihood(split_stats, hyp);
+    split_ll = LogLikelihood(s, hyp);
     
-    merge_stats = zeros(length(parcels_merge), 3);
-    for i = 1:length(parcels_merge)
-        samples = D(parcels_merge{i}, parcels_merge{merge_i});
-        if (i == merge_i)
-            samples = samples(logical(triu(ones(size(samples)),1)));
-            if (isempty(samples))
-                continue;
+    m = zeros(K, 3);
+    for i = 1:K
+        if (i == split_i1)
+            i11 = i;
+            i12 = split_i2;
+            i22 = split_i2 + K;
+            m(i,1) = s(i11,1) + s(i12,1) + s(i22,1);
+            m(i,2) = (s(i11,1)*s(i11,2) + s(i12,1)*s(i12,2) + s(i22,1)*s(i22,2))/m(i,1);
+            if (s(i11,1) + s(i22,1) > 0)
+                %Combine i11 and i22
+                m(i,3) = s(i11,3) + s(i22,3) + (s(i11,1)*s(i22,1))/(s(i11,1)+s(i22,1)) * (s(i11,2)- s(i22,2))^2;
+                mean_11_22 = (s(i11,1)*s(i11,2)+s(i22,1)*s(i22,2))/(s(i11,1)+s(i22,1));
+                %Combine with i12
+                m(i,3) = m(i,3) + s(i12,3) + (s(i12,1)*(s(i11,1)+s(i22,1)))/m(i,1) * (s(i12,2)- mean_11_22)^2;
+            else
+                m(i,3) = 0;
             end
-        else
-            samples = samples(:);
+        elseif (i ~= split_i2)
+            m(i,1) = s(i,1) + s(i+K,1);
+            m(i,2) = (s(i,1)*s(i,2) + s(i+K,1)*s(i+K,2))/m(i,1);
+            m(i,3) = s(i,3) + s(i+K,3) + (s(i,1)*s(i+K,1))/m(i,1) * (s(i,2)- s(i+K,2))^2;
         end
-        merge_stats(i,1) = length(samples);
-        merge_stats(i,2) = sum(samples)/merge_stats(i,1);
-        merge_stats(i,3) = sum((samples-merge_stats(i,2)).^2);
     end
-    merge_ll = LogLikelihood(merge_stats, hyp);
+    merge_ll = LogLikelihood(m, hyp);
     
     ld = merge_ll - split_ll;
 end

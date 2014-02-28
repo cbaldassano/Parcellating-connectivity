@@ -1,7 +1,7 @@
 function Z = LinkageConstrained(X, adj_list)
 % Based on MATLAB "LINKAGEOLD" function (in linkage.m)
 
-load('../data/unrelated40/full_sqEucDist.mat');
+load('../data/Q3/group/full_sqEucDist.mat');
 % Qx = repmat(dot(X,X,2),1,size(X,1));
 % Y = Qx+Qx'-2*(X*X');
 % Y(1:(size(Y,1)+1):size(Y,1)^2) = 0; % Remove numerical errors on diagonal
@@ -105,34 +105,4 @@ end
 
 I = I(valid_flags);
     
-end
-
-function m = MergeSorted(a, b)
-m = zeros(length(a) + length(b), 1);
-i_m = 1;
-i_a = 1;
-i_b = 1;
-while ((i_a <= length(a)) && (i_b <= length(b)))
-    if (a(i_a) < b(i_b))
-        m(i_m) = a(i_a);
-        i_a = i_a + 1;
-    else
-        m(i_m) = b(i_b);
-        i_b = i_b + 1;
-    end
-    i_m = i_m + 1;
-end
-
-while (i_a <= length(a))
-    m(i_m) = a(i_a);
-    i_m = i_m + 1;
-    i_a = i_a + 1;
-end
-
-while (i_b <= length(b))
-    m(i_m) = b(i_b);
-    i_m = i_m + 1;
-    i_b = i_b + 1;
-end
-
 end

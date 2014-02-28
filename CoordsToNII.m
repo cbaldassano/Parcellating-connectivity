@@ -1,4 +1,8 @@
-function CoordsToNII(coords, max_dist, ref_file, out_file)
+function CoordsToNII(coords, vals, max_dist, ref_file, out_file)
+
+if (length(vals) == 1)
+    vals = vals*ones(size(coords,1),1);
+end
 
 ref = load_nii(ref_file);
 ref_dim = ref.hdr.dime.dim(2:4);
@@ -19,7 +23,7 @@ for i = 1:size(coords,1)
         for y = -radius:radius
             for z = -radius:radius
                 if (norm([x y z].*vox_scales) <= max_dist)
-                    ref.img(center(1)+x, center(2)+y, center(3)+z) = 1;
+                    ref.img(center(1)+x, center(2)+y, center(3)+z) = vals(i);
                 end
             end
         end
