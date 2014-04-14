@@ -5,25 +5,22 @@ function DivideSurface(midthickness_files, surface_template_file, z, orig_ind, o
 [sorted_z, sorted_i] = sort(z);
 parcels = mat2cell(sorted_i, 1, diff(find(diff([0 sorted_z (max(z)+1)]))));
 orig_parcels = cell(2,1);
-fid_filelist = fopen([save_prefix '_flist.txt'], 'w');
 for i = 1:length(parcels)
     if (parcels{i}(1) <= 29696)
         orig_parcels{1} = [orig_parcels{1} {orig_ind{1}(parcels{i})}];
-        [~,filename] = fileparts([save_prefix '_1_' num2str(length(orig_parcels{1}))]);
     else
         orig_parcels{2} = [orig_parcels{2} {orig_ind{2}(parcels{i} - 29696)}];
-        [~,filename] = fileparts([save_prefix '_2_' num2str(length(orig_parcels{2}))]);
     end
-    fprintf(fid_filelist, '''%s'', ', filename);
 end
-fclose(fid_filelist);
 
+
+% rng(1);
 % max_overlay = max(max(overlay{1}),max(overlay{2}));
 % colors = rand(max_overlay + 2, 3);
 % colors(1,:) = [0 0 0];
 % colors(2,:) = [1 1 1];
-max_overlay = 2*10^9;
-colors = jet(50);
+max_overlay = 500;
+colors = hot;
 
 % Inspired by Guillaume Flandin <Guillaume@artefact.tk> http://www.artefact.tk/software/matlab/gifti/
 fid = fopen(surface_template_file);
@@ -31,6 +28,7 @@ template_xml = fread(fid,'*char')';
 fclose(fid);
 
 fid_sizelist = fopen([save_prefix '_slist.txt'], 'w');
+fid_filelist = fopen([save_prefix '_flist.txt'], 'w');
 coords = cell(2,1);
 tri = cell(2,1);
 for hem = 1:2
@@ -57,20 +55,23 @@ for hem = 1:2
     tri{hem} = permute(reshape(tri{hem},[3 64980]),[2 1]) + 1;
     
     for i = 1:length(orig_parcels{hem})
+        [~,filename] = fileparts([save_prefix '_' num2str(hem) '_' num2str(i)]);
+        fprintf(fid_filelist, '''%s'', ', filename);
         parcel_tri = tri{hem}(any(ismember(tri{hem}, orig_parcels{hem}{i}), 2), :);
         if (isempty(parcel_tri))
             continue;
         end
         parcel_overlay = overlay{hem}(parcel_tri);
-        parcel_overlay(~ismember(parcel_tri, orig_parcels{hem}{i})) = -1;
+        %gives borders
+        %parcel_overlay(~ismember(parcel_tri, orig_parcels{hem}{i})) = -1;
         fid = fopen([save_prefix '_' num2str(hem) '_' num2str(i) '_' overlay_suffix '.clrs'], 'w');
         for f = 1:size(parcel_overlay,1)
             for v = 1:3
-%                 val = parcel_overlay(f,v) + 2;
-%                 fprintf(fid, '%f %f %f\n', colors(val,1), colors(val,2), colors(val,3));
+%                  val = parcel_overlay(f,v) + 2;
+%                  fprintf(fid, '%f %f %f\n', colors(val,1), colors(val,2), colors(val,3));
                 
-                ind = min(round(parcel_overlay(f,v)/max_overlay*size(colors,1)) + 1, size(colors,1));
-                fprintf(fid, '%f %f %f\n', colors(ind,1), colors(ind,2), colors(ind,3));
+               ind = max(min(round(parcel_overlay(f,v)/max_overlay*size(colors,1)) + 1, size(colors,1)),1);
+               fprintf(fid, '%f %f %f\n', colors(ind,1), colors(ind,2), colors(ind,3));
             end
         end
         fclose(fid);
@@ -88,10 +89,11 @@ for hem = 1:2
             size(parcel_coords,2), base64encode(dzip(typecast(parcel_coords(:), 'uint8'))), ...
             size(parcel_tri,2), base64encode(dzip(typecast(parcel_tri(:), 'uint8'))));
         fclose(fid);
-        system(['mris_convert ' save_prefix '_' num2str(hem) '_' num2str(i) '.gii ' save_prefix '_' num2str(hem) '_' num2str(i) '.fsm']);
+%        system(['mris_convert ' save_prefix '_' num2str(hem) '_' num2str(i) '.gii ' save_prefix '_' num2str(hem) '_' num2str(i) '.fsm']);
     end
 end
 
 fclose(fid_sizelist);
+fclose(fid_filelist);
 end
 

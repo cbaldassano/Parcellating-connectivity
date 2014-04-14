@@ -1,4 +1,4 @@
-function LearnSynth(type)
+function DC_K = LearnSynth(type)
 
 alpha=10;
 kappa=0.0001;
@@ -15,6 +15,7 @@ WC = zeros(num_noise,1);
 RG = zeros(num_noise,1);
 DC = zeros(num_noise,1);
 DC_stats = cell(num_noise, seeds);
+DC_K = zeros(num_noise,1);
 
 if (strcmp(type, 'square'))
     n_clust = 9;
@@ -25,7 +26,7 @@ elseif (strcmp(type, 'face'))
 end
 
 subject = 'synth';
-for noise_ind = 4%1:num_noise
+for noise_ind = 1:num_noise
     disp(['Noise level ' num2str(noise_ind)]);
     experiment = [type '_' num2str(synth_sigsq(noise_ind))];
     
@@ -61,7 +62,11 @@ for noise_ind = 4%1:num_noise
     parfor seed = 1:seeds
         %disp(['     Seed ' num2str(seed)]);
         rng(seed);
-        z = WardClustering(D, adj_list, n_clust);
+        [~, Z] = WardClustering(D, adj_list, 1:20);
+        logp = LogProbWC(D, Z, 1:20, alpha, kappa, nu, sigsq);
+        [~,max_i] = max(logp);
+        disp(num2str(max_i));
+        z = cluster(Z, 'maxclust', max_i);
         c = ClusterSpanningTrees(z, adj_list);
         [~,stats] = ddCRP(D, adj_list, coords, ...
                           c, [], [], [], gt_z, ...
@@ -78,8 +83,8 @@ for noise_ind = 4%1:num_noise
         end
     end
     DC(noise_ind) = DC_stats{noise_ind, max_lp_seed}.NMI(end);
+    DC_K(noise_ind) = DC_stats{noise_ind, max_lp_seed}.K(end);
 end
-DC
 
 %save(['../output/synth/' type '.mat'], 'synth_sigsq','LS', 'NC', 'WC', 'RG', 'DC','DC_stats');
 end
