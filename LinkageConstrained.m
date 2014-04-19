@@ -1,11 +1,11 @@
 function Z = LinkageConstrained(X, adj_list)
 % Based on MATLAB "LINKAGEOLD" function (in linkage.m)
 
-% load('../data/Q3/group/smoothed1_sqEucDist.mat');
-Qx = repmat(dot(X,X,2),1,size(X,1));
-Y = Qx+Qx'-2*(X*X');
-Y(1:(size(Y,1)+1):size(Y,1)^2) = 0; % Remove numerical errors on diagonal
-Y = squareform(Y);
+load('../data/Q3/group/smoothed1_log_sqEucDist.mat');
+% Qx = repmat(dot(X,X,2),1,size(X,1));
+% Y = Qx+Qx'-2*(X*X');
+% Y(1:(size(Y,1)+1):size(Y,1)^2) = 0; % Remove numerical errors on diagonal
+% Y = squareform(Y);
 
 A = false(length(adj_list));
 for i = 1:length(adj_list)
@@ -35,7 +35,7 @@ all_inds = 1:size(Y,2);
 conn_inds = all_inds(connected);
 
 for s = 1:(m-1)
-   %fprintf('%d%% clustered...\n', round(100*s/(m-1)));
+   fprintf('%d%% clustered...\n', round(100*s/(m-1)));
    
    if (isempty(conn_inds))
        % The graph was disconnected (e.g. two hemispheres)
