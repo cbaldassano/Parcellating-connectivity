@@ -1,6 +1,6 @@
-function DivideSurface(midthickness_files, surface_template_file, z, orig_ind, overlay, save_prefix, overlay_suffix)
+function DivideSurface(midthickness_files, surface_template_file, z, orig_ind, adj_list, overlay, save_prefix, overlay_suffix)
 % SURF_PRE = '/data/supervoxel/data/unrelated40/surfaces/';
-%DivideSurface({[SURF_PRE 'Q1-2_R120.L.very_inflated.32k_fs_LR.surf.gii'],[SURF_PRE 'Q1-2_R120.R.very_inflated.32k_fs_LR.surf.gii']}, [SURF_PRE 'surface_template.gii'], z', orig_ind, maps, '/data/supervoxel/output/surfaces_WC_inflated/s', 'VGD');
+%DivideSurface({[SURF_PRE 'Q1-2_R120.L.very_inflated.32k_fs_LR.surf.gii'],[SURF_PRE 'Q1-2_R120.R.very_inflated.32k_fs_LR.surf.gii']}, [SURF_PRE 'surface_template.gii'], z', orig_ind, adj_list, maps, '/data/supervoxel/output/surfaces_WC_inflated/s', 'VGD');
 
 [sorted_z, sorted_i] = sort(z);
 parcels = mat2cell(sorted_i, 1, diff(find(diff([0 sorted_z (max(z)+1)]))));
@@ -14,13 +14,33 @@ for i = 1:length(parcels)
 end
 
 
-% rng(1);
-% max_overlay = max(max(overlay{1}),max(overlay{2}));
-% colors = rand(max_overlay + 2, 3);
-% colors(1,:) = [0 0 0];
-% colors(2,:) = [1 1 1];
-max_overlay = 500;
-colors = hot;
+rng(3);
+%max_overlay = max(max(overlay{1}),max(overlay{2}));
+%Assumes overlay is in 59412 space
+max_overlay = max(overlay);
+overlay_adj = cell(max_overlay,1);
+for i = 1:max_overlay
+    overlay_adj{i} = unique(overlay(setdiff(unique([adj_list{overlay == i}]),unique(find(overlay == i)))));
+end
+palette = PTPalette(12);
+colors = repmat(palette,ceil(max_overlay/12),1);
+colors = colors(randperm(size(colors,1),max_overlay),:);
+no_conflict = false;
+while ~no_conflict
+    no_conflict = true;
+    for i = 1:max_overlay
+        if (ismember(colors(i,:),colors(overlay_adj{i},:),'rows'));
+            colors(i,:) = palette(randi(12),:);
+            no_conflict = false;
+        end
+    end
+end
+colors = [0 0 0; 1 1 1; colors];
+overlay = ConvertToOrigHem(overlay, orig_ind);
+
+% max_overlay = 15;
+% min_overlay = 0;
+% colors = PTcolormap(300, [min_overlay max_overlay]);
 
 % Inspired by Guillaume Flandin <Guillaume@artefact.tk> http://www.artefact.tk/software/matlab/gifti/
 fid = fopen(surface_template_file);
@@ -67,11 +87,17 @@ for hem = 1:2
         fid = fopen([save_prefix '_' num2str(hem) '_' num2str(i) '_' overlay_suffix '.clrs'], 'w');
         for f = 1:size(parcel_overlay,1)
             for v = 1:3
-%                  val = parcel_overlay(f,v) + 2;
-%                  fprintf(fid, '%f %f %f\n', colors(val,1), colors(val,2), colors(val,3));
+                 val = parcel_overlay(f,v) + 2;
+                 fprintf(fid, '%f %f %f\n', colors(val,1), colors(val,2), colors(val,3));
                 
-               ind = max(min(round(parcel_overlay(f,v)/max_overlay*size(colors,1)) + 1, size(colors,1)),1);
-               fprintf(fid, '%f %f %f\n', colors(ind,1), colors(ind,2), colors(ind,3));
+%                ind = max(min(round((parcel_overlay(f,v)-min_overlay)/(max_overlay-min_overlay)*size(colors,1)) + 1, size(colors,1)),1);
+%                fprintf(fid, '%f %f %f\n', colors(ind,1), colors(ind,2), colors(ind,3));
+               
+%                if (~all(parcel_overlay(f,:) == parcel_overlay(f,v)))
+%                    fprintf(fid, '0.000000 0.000000 0.000000\n');
+%                else
+%                    fprintf(fid, '1.000000 1.000000 1.000000\n');
+%                end
             end
         end
         fclose(fid);

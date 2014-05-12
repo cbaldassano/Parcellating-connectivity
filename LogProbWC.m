@@ -12,4 +12,5 @@ for i = 1:length(sizes)
     c(1:sizes(i)) = 1:sizes(i);
     
     logp(i) = FullProbabilityddCRP(D, c, parcels, alpha, hyp);
+    disp([num2str(sizes(i)) ': ' num2str(logp(i))]);
 end

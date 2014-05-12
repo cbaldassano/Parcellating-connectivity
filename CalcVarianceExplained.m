@@ -10,12 +10,7 @@ end
 
 D = cast(D,'double');
 if (nargin < 3)
-    off_diags = true(size(D));
-    for i = 1:size(D,1)
-        off_diags(i,i) = false;
-    end
-    off_diags = off_diags(:);
-    base_var = sum((mean(D(off_diags)) - D(off_diags)).^2);
+    base_var = CalcBaseVar;
 end
 sum_var = 0;
 for i=1:length(bins)
