@@ -24,7 +24,7 @@ surf_coords = cast(cell2mat(surf_coords),'double');
 T = delaunayn(surf_coords);
 [nearest,dists] = dsearchn(surf_coords,T,coords);
 
-load('../data/unrelated40/full.mat','orig_ind');
+load('../data/gray.mat','orig_ind');
 orig_mapping = zeros(1,2*32492);
 orig_mapping(orig_ind{1}) = 1:length(orig_ind{1});
 orig_mapping(orig_ind{2}+32492) = length(orig_ind{1}) + (1:length(orig_ind{2}));

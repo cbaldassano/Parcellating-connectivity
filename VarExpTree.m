@@ -2,7 +2,7 @@ function var_exp = VarExpTree(D, Z, sizes, base_var)
 
     D = cast(D, 'double');
     if (nargin < 4)
-        base_var = CalcBaseVar;
+        base_var = CalcBaseVar(D);
     end
 
     var_exp = zeros(length(sizes),1);

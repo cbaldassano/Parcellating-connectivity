@@ -11,5 +11,4 @@ D = D - mean(D(off_diags));
 D = D./std(D(off_diags));
 
 D = cast(D, 'single');
-disp(num2str(mean(D(off_diags)))); disp(num2str(std(D(off_diags))));
 end

@@ -11,6 +11,6 @@ for i = 1:length(sizes)
     c = zeros(length(z),1);
     c(1:sizes(i)) = 1:sizes(i);
     
-    logp(i) = FullProbabilityddCRP(D, c, parcels, alpha, hyp);
-    disp([num2str(sizes(i)) ': ' num2str(logp(i))]);
+    logp(i) = FullProbabilityddCRP(D, c, parcels, alpha, hyp, CheckSymApprox(D));
+    % disp([num2str(sizes(i)) ': ' num2str(logp(i))]);
 end

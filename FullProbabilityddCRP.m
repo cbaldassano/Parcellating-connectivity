@@ -1,5 +1,16 @@
-function logp = FullProbabilityddCRP(D, c, parcels, alpha, hyp)
+function logp = FullProbabilityddCRP(D, c, parcels, alpha, hyp, sym)
 
+    if (sym)
+        logp = log(alpha) * sum(c' == 1:length(c)) + ...
+            FullProbabilityddCRPSym(D, parcels, hyp);
+    else
+        logp = log(alpha) * sum(c' == 1:length(c)) + ...
+            FullProbabilityddCRPSym(D, parcels, hyp) + ...
+            FullProbabilityddCRPSym(D', parcels, hyp);
+    end
+end
+
+function logp = FullProbabilityddCRPSym(D, parcels, hyp)
 stats = zeros(length(parcels)*(length(parcels)+1),3);
 j = 1;
 for c1 = 1:length(parcels)
@@ -19,7 +30,6 @@ for c1 = 1:length(parcels)
         j = j+1;
     end
 end
-logp = log(alpha) * sum(c' == 1:length(c)) + LogLikelihood(stats, hyp);
-
+logp = LogLikelihood(stats, hyp);
 end
 

@@ -1,11 +1,11 @@
-function DC_K = LearnSynth(type)
+function [DC DC_K] = LearnSynth(type)
 
 alpha=10;
 kappa=0.0001;
 nu=1;
 sigsq = 1;
 pass_limit = 20;
-seeds = 10;
+seeds = 12;
 
 synth_sigsq = 0:8;
 num_noise = length(synth_sigsq);
@@ -59,19 +59,12 @@ for noise_ind = 1:num_noise
 %     RG(noise_ind) = CalcNMI(gt_z, z);
      
     disp('   ddCRP');
+    D = NormalizeConn(D);
+    [~, Z] = WardClustering(D, adj_list, 1:20);
     parfor seed = 1:seeds
         %disp(['     Seed ' num2str(seed)]);
         rng(seed);
-        [~, Z] = WardClustering(D, adj_list, 1:20);
-        logp = LogProbWC(D, Z, 1:20, alpha, kappa, nu, sigsq);
-        [~,max_i] = max(logp);
-        disp(num2str(max_i));
-        z = cluster(Z, 'maxclust', max_i);
-        c = ClusterSpanningTrees(z, adj_list);
-        [~,stats] = ddCRP(D, adj_list, coords, ...
-                          c, [], [], [], gt_z, ...
-                          pass_limit, alpha, kappa, nu, sigsq, ...
-                          100, 0);
+        [~,stats] = InitializeAndRunddCRP(Z, D, adj_list, 1:20, alpha, kappa, nu, sigsq, pass_limit, gt_z, 0);
         DC_stats{noise_ind,seed} = stats;
     end
     

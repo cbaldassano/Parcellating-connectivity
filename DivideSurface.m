@@ -1,15 +1,18 @@
 function DivideSurface(midthickness_files, surface_template_file, z, orig_ind, adj_list, overlay, save_prefix, overlay_suffix)
 % SURF_PRE = '/data/supervoxel/data/unrelated40/surfaces/';
-%DivideSurface({[SURF_PRE 'Q1-2_R120.L.very_inflated.32k_fs_LR.surf.gii'],[SURF_PRE 'Q1-2_R120.R.very_inflated.32k_fs_LR.surf.gii']}, [SURF_PRE 'surface_template.gii'], z', orig_ind, adj_list, maps, '/data/supervoxel/output/surfaces_WC_inflated/s', 'VGD');
+%DivideSurface({[SURF_PRE 'Q1-Q6_R440.L.very_inflated.32k_fs_LR.surf.gii'],[SURF_PRE 'Q1-Q6_R440.R.very_inflated.32k_fs_LR.surf.gii']}, [SURF_PRE 'surface_template.gii'], map_z, orig_ind, adj_list, mapAtlas, '/data/supervoxel/output/group468/surf/s', 'ArcaroAtlas');
 
 [sorted_z, sorted_i] = sort(z);
 parcels = mat2cell(sorted_i, 1, diff(find(diff([0 sorted_z (max(z)+1)]))));
+parcel_order = cell(2,1);
 orig_parcels = cell(2,1);
 for i = 1:length(parcels)
     if (parcels{i}(1) <= 29696)
         orig_parcels{1} = [orig_parcels{1} {orig_ind{1}(parcels{i})}];
+        parcel_order{1} = [parcel_order{1} i];
     else
         orig_parcels{2} = [orig_parcels{2} {orig_ind{2}(parcels{i} - 29696)}];
+        parcel_order{2} = [parcel_order{2} i];
     end
 end
 
@@ -21,6 +24,7 @@ max_overlay = max(overlay);
 overlay_adj = cell(max_overlay,1);
 for i = 1:max_overlay
     overlay_adj{i} = unique(overlay(setdiff(unique([adj_list{overlay == i}]),unique(find(overlay == i)))));
+    overlay_adj{i} = overlay_adj{i}(overlay_adj{i}>0);
 end
 palette = PTPalette(12);
 colors = repmat(palette,ceil(max_overlay/12),1);
@@ -83,7 +87,7 @@ for hem = 1:2
         end
         parcel_overlay = overlay{hem}(parcel_tri);
         %gives borders
-        %parcel_overlay(~ismember(parcel_tri, orig_parcels{hem}{i})) = -1;
+        parcel_overlay(~ismember(parcel_tri, orig_parcels{hem}{i})) = -1;
         fid = fopen([save_prefix '_' num2str(hem) '_' num2str(i) '_' overlay_suffix '.clrs'], 'w');
         for f = 1:size(parcel_overlay,1)
             for v = 1:3
@@ -103,7 +107,6 @@ for hem = 1:2
         fclose(fid);
         fprintf(fid_sizelist, '%d, ', 9*size(parcel_overlay,1));
         
-        
         verts = unique(parcel_tri(:));
         inverse_ind = zeros(32492,1);
         inverse_ind(verts) = 1:length(verts);
@@ -115,7 +118,7 @@ for hem = 1:2
             size(parcel_coords,2), base64encode(dzip(typecast(parcel_coords(:), 'uint8'))), ...
             size(parcel_tri,2), base64encode(dzip(typecast(parcel_tri(:), 'uint8'))));
         fclose(fid);
-%        system(['mris_convert ' save_prefix '_' num2str(hem) '_' num2str(i) '.gii ' save_prefix '_' num2str(hem) '_' num2str(i) '.fsm']);
+        system(['mris_convert ' save_prefix '_' num2str(hem) '_' num2str(i) '.gii ' save_prefix '_' num2str(hem) '_' num2str(i) '.fsm']);
     end
 end
 

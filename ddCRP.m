@@ -1,11 +1,11 @@
-function [map_z stats] = ddCRP(D, adj_list, coords, ...
-                               init_c, const_c, labels, bold, gt_z, ...
+function [map_z stats] = ddCRP(D, adj_list, ...
+                               init_c, const_c, gt_z, ...
                                num_passes, alpha, kappa, nu, sigsq, ...
                                stats_interval, verbose)
 
 hyp = ComputeCachedLikelihoodTerms(kappa, nu, sigsq);
 pid = randi(10000);
-nvox = size(coords, 1);
+nvox = length(adj_list);
 
 if (isempty(const_c))
     const_c = zeros(nvox, 1);
@@ -26,11 +26,13 @@ end
 
 G = sparse(1:nvox,c,1,nvox,nvox);
 [K, z, parcels] = ConnectedComp(G);
-curr_lp = FullProbabilityddCRP(D, c, parcels, alpha, hyp);
+
+sym = CheckSymApprox(D);
+      
+curr_lp = FullProbabilityddCRP(D, c, parcels, alpha, hyp, sym);
 
 
-stats = struct('times',[],'lp',[],'NMI',[],'K',[], ...
-               'conn_diff', zeros(0,4), 'z', zeros(0,nvox));
+stats = struct('times',[],'lp',[],'NMI',[],'K',[], 'z', zeros(0,nvox));
 max_lp = -Inf;
 t0 = cputime;
 steps = 0;
@@ -48,11 +50,6 @@ for pass = 1:num_passes
             stats = UpdateStats(stats, t0, curr_lp, K, z, steps, gt_z, map_z, pid, verbose);
         end
         
-        if (~isempty(labels) && ~isempty(bold))
-            stats.conn_diff = [stats.conn_diff; ...
-                               CalcPPAConnDiff(z, labels, coords, bold)];
-        end
-        
         if (c(i) == i)
             rem_delta_lp = -log(alpha);
             z_rem = z; parcels_rem = parcels;
@@ -61,7 +58,7 @@ for pass = 1:num_passes
             [K_rem, z_rem, parcels_rem] = ConnectedComp(G);
             if (K_rem ~= K)
                 rem_delta_lp = -LikelihoodDiff(D, ...
-                                  parcels_rem, z_rem(i), z_rem(c(i)), hyp);
+                                  parcels_rem, z_rem(i), z_rem(c(i)), hyp, sym);
             else
                 rem_delta_lp = 0;
             end
@@ -75,7 +72,7 @@ for pass = 1:num_passes
             if (z_rem(n) == z_rem(c(i)))  % Clustered with old neighbor
                 lp(n_ind) = -rem_delta_lp;
             elseif (z_rem(n) ~= z_rem(i))  % Not already clustered with n
-                lp(n_ind) = LikelihoodDiff(D, parcels_rem, z_rem(i), z_rem(n), hyp);
+                lp(n_ind) = LikelihoodDiff(D, parcels_rem, z_rem(i), z_rem(n), hyp, sym);
             end
         end
         
@@ -102,7 +99,16 @@ function [K, z, parcels] = ConnectedComp(G)
     parcels = mat2cell(sorted_i, 1, diff(find(diff([0 sorted_z (K+1)]))));
 end
 
-function ld = LikelihoodDiff(D, parcels_split, split_i1, split_i2, hyp)
+function ld = LikelihoodDiff(D, parcels_split, split_i1, split_i2, hyp, sym)
+    if (sym)
+        ld = LikelihoodDiffSym(D, parcels_split, split_i1, split_i2, hyp);
+    else
+        ld = LikelihoodDiffSym(D, parcels_split, split_i1, split_i2, hyp) + ...
+             LikelihoodDiffSym(D', parcels_split, split_i1, split_i2, hyp);
+    end
+end
+
+function ld = LikelihoodDiffSym(D, parcels_split, split_i1, split_i2, hyp)
     K = length(parcels_split);
     s = zeros(2*K, 3);
     for i = 1:K

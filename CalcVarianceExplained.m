@@ -10,7 +10,7 @@ end
 
 D = cast(D,'double');
 if (nargin < 3)
-    base_var = CalcBaseVar;
+    base_var = CalcBaseVar(D);
 end
 sum_var = 0;
 for i=1:length(bins)

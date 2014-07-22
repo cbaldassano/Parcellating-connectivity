@@ -20,6 +20,6 @@ end
 
 C = C + C';
 
-
+C = atanh(C);
 end
 
