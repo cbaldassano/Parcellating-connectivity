@@ -9,6 +9,6 @@ nu = hyp(3) + stats(:,1);
 %Assume mu0=0 and kappa0 << n
 nu_sigsq = hyp(5) + stats(:,3) + hyp(2) * stats(:,2).^2;
 
-logp = sum(hyp(6) + gammaln(nu/2)- 0.5*log(kappa)- (nu/2).*log(nu_sigsq)- (stats(:,1)/2)*log(pi));
+logp = sum(hyp(6) + gammaln(nu/2)- 0.5*log(kappa) - (nu/2).*log(nu_sigsq)- (stats(:,1)/2)*log(pi));
 end
 

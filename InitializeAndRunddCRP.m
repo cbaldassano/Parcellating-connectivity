@@ -3,7 +3,7 @@ function [map_z, stats] = InitializeAndRunddCRP(Z, D_norm, adj_list, sizes, alph
 
 logp = LogProbWC(D_norm, Z, sizes, alpha, kappa, nu, sigsq);
 [~,max_i] = max(logp);
-z = cluster(Z, 'maxclust', max_i);
+z = cluster(Z, 'maxclust', sizes(max_i));
 c = ClusterSpanningTrees(z, adj_list);
 [map_z,stats] = ddCRP(D_norm, adj_list, c, [], gt_z, ...
                   pass_limit, alpha, kappa, nu, sigsq, ...

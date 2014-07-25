@@ -26,7 +26,7 @@ elseif (strcmp(type, 'face'))
 end
 
 subject = 'synth';
-for noise_ind = 1:num_noise
+for noise_ind = 3%1:num_noise
     disp(['Noise level ' num2str(noise_ind)]);
     experiment = [type '_' num2str(synth_sigsq(noise_ind))];
     
@@ -61,7 +61,7 @@ for noise_ind = 1:num_noise
     disp('   ddCRP');
     D = NormalizeConn(D);
     [~, Z] = WardClustering(D, adj_list, 1:20);
-    parfor seed = 1:seeds
+    for seed = 1:seeds
         %disp(['     Seed ' num2str(seed)]);
         rng(seed);
         [~,stats] = InitializeAndRunddCRP(Z, D, adj_list, 1:20, alpha, kappa, nu, sigsq, pass_limit, gt_z, 0);

@@ -1,8 +1,13 @@
-function Z = LinkageConstrained(X, adj_list)
+function Z = LinkageConstrained(D, adj_list)
 % Based on MATLAB "LINKAGEOLD" function (in linkage.m)
 
 % Y = X;
 % load('../data/Q3/group/smoothed1_log_sqEucDist.mat');
+if (CheckSymApprox(D))
+    X = D;
+else
+    X = [D D'];
+end
 Qx = repmat(dot(X,X,2),1,size(X,1));
 Y = Qx+Qx'-2*(X*X');
 Y(1:(size(Y,1)+1):size(Y,1)^2) = 0; % Remove numerical errors on diagonal

@@ -18,7 +18,8 @@ end
 c = const_c;
 for i = find(const_c==0)'
     if (init_c(i) == 0)
-        c(i) = adj_list{i}(randi(length(adj_list{i})));
+        neighbors = [adj_list{i} i];
+        c(i) = neighbors(randi(length(neighbors)));
     else
         c(i) = init_c(i);
     end
@@ -34,7 +35,7 @@ curr_lp = FullProbabilityddCRP(D, c, parcels, alpha, hyp, sym);
 
 stats = struct('times',[],'lp',[],'NMI',[],'K',[], 'z', zeros(0,nvox));
 max_lp = -Inf;
-t0 = cputime;
+t0 = tic;
 steps = 0;
 for pass = 1:num_passes
     nonconst_vox = find(const_c==0);
@@ -48,6 +49,7 @@ for pass = 1:num_passes
         
         if (mod(steps, stats_interval) == 0)
             stats = UpdateStats(stats, t0, curr_lp, K, z, steps, gt_z, map_z, pid, verbose);
+            disp(['VE: ' num2str(CalcVarianceExplained(D, map_z))]);
         end
         
         if (c(i) == i)
@@ -100,87 +102,107 @@ function [K, z, parcels] = ConnectedComp(G)
 end
 
 function ld = LikelihoodDiff(D, parcels_split, split_i1, split_i2, hyp, sym)
-    if (sym)
-        ld = LikelihoodDiffSym(D, parcels_split, split_i1, split_i2, hyp);
-    else
-        ld = LikelihoodDiffSym(D, parcels_split, split_i1, split_i2, hyp) + ...
-             LikelihoodDiffSym(D', parcels_split, split_i1, split_i2, hyp);
-    end
-end
-
-function ld = LikelihoodDiffSym(D, parcels_split, split_i1, split_i2, hyp)
     K = length(parcels_split);
-    s = zeros(2*K, 3);
-    for i = 1:K
-        samples = D(parcels_split{i}, parcels_split{split_i1});
-        if (i == split_i1)
-            samples = samples(logical(triu(ones(size(samples)),1)));
-            if (isempty(samples))
-                continue;
-            end
-        else
-            samples = samples(:);
-        end
-        s(i,1) = length(samples);
-        s(i,2) = sum(samples)/s(i,1);
-        s(i,3) = sum((samples-s(i,2)).^2);
-    end
-    for i = 1:K
-        samples = D(parcels_split{i}, parcels_split{split_i2});
-        if (i == split_i1)
-            continue;
-        end
-        if (i == split_i2)
-            samples = samples(logical(triu(ones(size(samples)),1)));
-            if (isempty(samples))
-                continue;
-            end
-        else
-            samples = samples(:);
-        end
-        s(i+K,1) = length(samples);
-        s(i+K,2) = sum(samples)/s(i+K,1);
-        s(i+K,3) = sum((samples-s(i+K,2)).^2);
-    end
-    split_ll = LogLikelihood(s, hyp);
-    
-    m = zeros(K, 3);
-    for i = 1:K
-        if (i == split_i1)
-            i11 = i;
-            i12 = split_i2;
-            i22 = split_i2 + K;
-            m(i,1) = s(i11,1) + s(i12,1) + s(i22,1);
-            m(i,2) = (s(i11,1)*s(i11,2) + s(i12,1)*s(i12,2) + s(i22,1)*s(i22,2))/m(i,1);
-            if (s(i11,1) + s(i22,1) > 0)
-                %Combine i11 and i22
-                m(i,3) = s(i11,3) + s(i22,3) + (s(i11,1)*s(i22,1))/(s(i11,1)+s(i22,1)) * (s(i11,2)- s(i22,2))^2;
-                mean_11_22 = (s(i11,1)*s(i11,2)+s(i22,1)*s(i22,2))/(s(i11,1)+s(i22,1));
-                %Combine with i12
-                m(i,3) = m(i,3) + s(i12,3) + (s(i12,1)*(s(i11,1)+s(i22,1)))/m(i,1) * (s(i12,2)- mean_11_22)^2;
+    s = zeros(K, K, 3);
+    for split_ind = [split_i1 split_i2]
+        for i = 1:K
+            samples = D(parcels_split{i}, parcels_split{split_ind});
+            if (sym && i == split_ind)
+                samples = samples(logical(triu(ones(size(samples)),1)));
             else
-                m(i,3) = 0;
+                samples = samples(:);
             end
-        elseif (i ~= split_i2)
-            m(i,1) = s(i,1) + s(i+K,1);
-            m(i,2) = (s(i,1)*s(i,2) + s(i+K,1)*s(i+K,2))/m(i,1);
-            m(i,3) = s(i,3) + s(i+K,3) + (s(i,1)*s(i+K,1))/m(i,1) * (s(i,2)- s(i+K,2))^2;
+            s(i,split_ind,:) = SufficientStats(samples);
+        end
+        if (~sym)
+            for i = 1:K
+                samples = D(parcels_split{split_ind}, parcels_split{i});
+                if (i == split_ind)
+                    off_diags = true(size(samples));
+                    off_diags(1:(size(samples,1)+1):end) = false;
+                    samples = samples(off_diags);
+                else
+                    samples = samples(:);
+                end
+                s(split_ind,i,:) = SufficientStats(samples);
+            end
         end
     end
-    merge_ll = LogLikelihood(m, hyp);
+    
+    if (sym)
+        split_ll = LogLikelihood([...
+            reshape(s(:,split_i1,:),[],3); ...
+            reshape(s(1:K ~= split_i1, split_i2,:),[],3)], hyp);
+    else
+        split_ll = LogLikelihood([...
+            reshape(s(:, split_i1,:),[],3); ...
+            reshape(s(:, split_i2,:),[],3); ...
+            reshape(s(split_i1, (1:K ~= split_i1) & (1:K ~= split_i2),:),[],3); ...
+            reshape(s(split_i2, (1:K ~= split_i1) & (1:K ~= split_i2),:),[],3)], hyp);
+    end
+    
+    m = zeros(2, K, 3);
+    for dir = 1:2
+        if (dir == 2)
+            if (sym)
+                break;
+            else
+                s = permute(s, [2 1 3]);
+            end
+        end
+        
+        for i = 1:K
+            if (i ~= split_i1 && i ~= split_i2)
+                s_m = reshape(s(i, [split_i1 split_i2], :),2,3);
+                m(dir,i,:) = MergeSuffStats(s_m);
+                
+            end
+        end
+    end
+    if (sym)
+        m_central = MergeSuffStats(...
+            [MergeSuffStats(reshape(s(split_i1, [split_i1 split_i2], :),2,3)); ...
+            reshape(s(split_i2, split_i2, :),1,3)]);
+        merge_ll = LogLikelihood([reshape(m(1, :, :),[],3); m_central], hyp);
+    else
+        m_central = MergeSuffStats(...
+            [MergeSuffStats(reshape(s(split_i1, [split_i1 split_i2], :),2,3)); ...
+             MergeSuffStats(reshape(s(split_i2, [split_i1 split_i2], :),2,3))]);
+         merge_ll = LogLikelihood([reshape(m(1, :, :),[],3); reshape(m(2, :, :),[],3); m_central], hyp);
+    end
     
     ld = merge_ll - split_ll;
 end
 
+function suffstats = SufficientStats(samples)
+    suffstats = zeros(3,1);
+    if (isempty(samples))
+        return;
+    end
+    suffstats(1) = length(samples);
+    suffstats(2) = sum(samples)/suffstats(1);
+    suffstats(3) = sum((samples-suffstats(2)).^2);
+end
+
+function m = MergeSuffStats(s_m)
+    m = zeros(1,3);
+    m(1) = s_m(1,1) + s_m(2,1);
+    m(2) = (s_m(1,1)*s_m(1,2) + s_m(2,1)*s_m(2,2))/m(1);
+    m(3) = s_m(1,3) + s_m(2,3) + ...
+                 (s_m(1,1)*s_m(2,1))/m(1) * (s_m(1,2) - s_m(2,2))^2;
+end
+
 function stats = UpdateStats(stats, t0, curr_lp, K, z, steps, gt_z, map_z, pid, verbose)
-    stats.times = [stats.times (cputime-t0)];
     stats.lp = [stats.lp curr_lp];
     stats.K = [stats.K K];
     stats.z = [stats.z; z];
+    elapsed = toc(t0);
+    stats.times = [stats.times elapsed];
     if (verbose)
         disp(['Step: ' num2str(steps) ...
-              '  Time: ' num2str(cputime-t0) ...
-              '  LP: ' num2str(curr_lp)]);
+              '  Time: ' num2str(elapsed) ...
+              '  LP: ' num2str(curr_lp) ...
+              '  K: ' num2str(K)]);
     end
     if (~isempty(gt_z))
         stats.NMI = [stats.NMI CalcNMI(gt_z, map_z)];
