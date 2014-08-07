@@ -20,25 +20,32 @@ end
 rng(3);
 %max_overlay = max(max(overlay{1}),max(overlay{2}));
 %Assumes overlay is in 59412 space
+% max_overlay = max(overlay);
+% overlay_adj = cell(max_overlay,1);
+% for i = 1:max_overlay
+%     overlay_adj{i} = unique(overlay(setdiff(unique([adj_list{overlay == i}]),unique(find(overlay == i)))));
+%     overlay_adj{i} = overlay_adj{i}(overlay_adj{i}>0);
+% end
+% palette = PTPalette(12);
+% colors = repmat(palette,ceil(max_overlay/12),1);
+% colors = colors(randperm(size(colors,1),max_overlay),:);
+% no_conflict = false;
+% while ~no_conflict
+%     no_conflict = true;
+%     for i = 1:max_overlay
+%         if (ismember(colors(i,:),colors(overlay_adj{i},:),'rows'));
+%             colors(i,:) = palette(randi(12),:);
+%             no_conflict = false;
+%         end
+%     end
+% end
+% colors = [0 0 0; 1 1 1; colors];
+% overlay = ConvertToOrigHem(overlay, orig_ind);
+
 max_overlay = max(overlay);
-overlay_adj = cell(max_overlay,1);
-for i = 1:max_overlay
-    overlay_adj{i} = unique(overlay(setdiff(unique([adj_list{overlay == i}]),unique(find(overlay == i)))));
-    overlay_adj{i} = overlay_adj{i}(overlay_adj{i}>0);
-end
 palette = PTPalette(12);
 colors = repmat(palette,ceil(max_overlay/12),1);
 colors = colors(randperm(size(colors,1),max_overlay),:);
-no_conflict = false;
-while ~no_conflict
-    no_conflict = true;
-    for i = 1:max_overlay
-        if (ismember(colors(i,:),colors(overlay_adj{i},:),'rows'));
-            colors(i,:) = palette(randi(12),:);
-            no_conflict = false;
-        end
-    end
-end
 colors = [0 0 0; 1 1 1; colors];
 overlay = ConvertToOrigHem(overlay, orig_ind);
 
@@ -87,7 +94,7 @@ for hem = 1:2
         end
         parcel_overlay = overlay{hem}(parcel_tri);
         %gives borders
-        parcel_overlay(~ismember(parcel_tri, orig_parcels{hem}{i})) = -1;
+        %parcel_overlay(~ismember(parcel_tri, orig_parcels{hem}{i})) = -1;
         fid = fopen([save_prefix '_' num2str(hem) '_' num2str(i) '_' overlay_suffix '.clrs'], 'w');
         for f = 1:size(parcel_overlay,1)
             for v = 1:3
@@ -107,6 +114,7 @@ for hem = 1:2
         fclose(fid);
         fprintf(fid_sizelist, '%d, ', 9*size(parcel_overlay,1));
         
+
         verts = unique(parcel_tri(:));
         inverse_ind = zeros(32492,1);
         inverse_ind(verts) = 1:length(verts);

@@ -5,10 +5,19 @@ end
 
 N = size(D,1);
 W = inf(size(D));
-for i = 1:size(D,1)
-    for j = adj_list{i}
-        W(i,j) = norm(D(i, (1:N ~= i) & (1:N ~= j)) - ...
-                      D(j, (1:N ~= i) & (1:N ~= j)), 2);
+if (CheckSymApprox(D))
+    for i = 1:size(D,1)
+        for j = adj_list{i}
+            W(i,j) = norm(D(i, (1:N ~= i) & (1:N ~= j)) - ...
+                          D(j, (1:N ~= i) & (1:N ~= j)), 2);
+        end
+    end
+else
+    for i = 1:size(D,1)
+        for j = adj_list{i}
+            W(i,j) = norm([D(i, (1:N ~= i) & (1:N ~= j)) D((1:N ~= i) & (1:N ~= j), i)'] - ...
+                          [D(j, (1:N ~= i) & (1:N ~= j)) D((1:N ~= i) & (1:N ~= j), j)'], 2);
+        end
     end
 end
 

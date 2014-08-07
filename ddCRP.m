@@ -1,7 +1,8 @@
-function [map_z stats] = ddCRP(D, adj_list, ...
-                               init_c, const_c, gt_z, ...
-                               num_passes, alpha, kappa, nu, sigsq, ...
-                               stats_interval, verbose)
+function [map_z stats pair_prob] = ddCRP(D, adj_list, ...
+                                    init_c, const_c, gt_z, ...
+                                    num_passes, alpha, kappa, nu, sigsq, ...
+                                    burn_in_passes, ...
+                                    stats_interval, verbose)
 
 hyp = ComputeCachedLikelihoodTerms(kappa, nu, sigsq);
 pid = randi(10000);
@@ -13,6 +14,10 @@ end
 
 if (isempty(init_c))
     init_c = zeros(nvox, 1);
+end
+
+if (~isempty(burn_in_passes))
+    pair_prob = zeros(1,nvox*(nvox-1)/2);
 end
 
 c = const_c;
@@ -33,7 +38,7 @@ sym = CheckSymApprox(D);
 curr_lp = FullProbabilityddCRP(D, c, parcels, alpha, hyp, sym);
 
 
-stats = struct('times',[],'lp',[],'NMI',[],'K',[], 'z', zeros(0,nvox));
+stats = struct('times',[],'lp',[],'NMI',[],'K',[], 'z', zeros(0,nvox), 'c', zeros(0,nvox));
 max_lp = -Inf;
 t0 = tic;
 steps = 0;
@@ -47,9 +52,12 @@ for pass = 1:num_passes
             map_z = z;
         end
         
+        if (~isempty(burn_in_passes) && pass > burn_in_passes)
+            pair_prob = pair_prob + (1 - pdist(z', 'hamming'));
+        end
+        
         if (mod(steps, stats_interval) == 0)
-            stats = UpdateStats(stats, t0, curr_lp, K, z, steps, gt_z, map_z, pid, verbose);
-            disp(['VE: ' num2str(CalcVarianceExplained(D, map_z))]);
+            stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, pid, verbose);
         end
         
         if (c(i) == i)
@@ -91,7 +99,12 @@ for pass = 1:num_passes
     end
 end
 
-stats = UpdateStats(stats, t0, curr_lp, K, z, steps, gt_z, map_z, pid, verbose);
+stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, pid, verbose);
+if (~isempty(burn_in_passes))
+    pair_prob = pair_prob / (sum(const_c==0)*(num_passes-burn_in_passes));
+else
+    pair_prob = [];
+end
 
 end
 
@@ -192,12 +205,13 @@ function m = MergeSuffStats(s_m)
                  (s_m(1,1)*s_m(2,1))/m(1) * (s_m(1,2) - s_m(2,2))^2;
 end
 
-function stats = UpdateStats(stats, t0, curr_lp, K, z, steps, gt_z, map_z, pid, verbose)
+function stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, pid, verbose)
     stats.lp = [stats.lp curr_lp];
     stats.K = [stats.K K];
     stats.z = [stats.z; z];
     elapsed = toc(t0);
     stats.times = [stats.times elapsed];
+    stats.c = [stats.c; c'];
     if (verbose)
         disp(['Step: ' num2str(steps) ...
               '  Time: ' num2str(elapsed) ...

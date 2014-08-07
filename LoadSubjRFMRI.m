@@ -1,5 +1,6 @@
-function D = LoadSubjRFMRI(datapath)
+function [bold, D] = LoadSubjRFMRI(datapath)
 
+disp(['Loading from ' datapath '...']);
 metric_files = {'lr1', 'lr2', 'rl1', 'rl2'};
 hems = {'left', 'right'};
 
@@ -30,6 +31,9 @@ for hem = 1:2
     bold{hem} = bold{hem}(valid_vox,:);
 end
 
-D = atanh(corr(cell2mat(bold)'));
+bold = cell2mat(bold);
+if (nargout > 1)
+    D = atanh(corr(bold'));
+end
 
 end

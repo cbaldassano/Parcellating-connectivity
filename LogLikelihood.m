@@ -1,5 +1,7 @@
 function logp = LogLikelihood(stats, hyp)
 
+stats = stats(stats(:,1)>1,:);
+
 % stats = [N | mu | sumsq]
 % hyp = [mu0 kappa0 nu0 sigsq0 nu0*sigsq0 const_logp_terms]
 
