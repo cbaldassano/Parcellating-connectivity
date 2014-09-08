@@ -1,5 +1,5 @@
 function DivideSurface(midthickness_files, surface_template_file, z, orig_ind, adj_list, overlay, save_prefix, overlay_suffix)
-% SURF_PRE = '/data/supervoxel/data/unrelated40/surfaces/';
+% SURF_PRE = '/data/supervoxel/data/group468/surfaces/';
 %DivideSurface({[SURF_PRE 'Q1-Q6_R440.L.very_inflated.32k_fs_LR.surf.gii'],[SURF_PRE 'Q1-Q6_R440.R.very_inflated.32k_fs_LR.surf.gii']}, [SURF_PRE 'surface_template.gii'], map_z, orig_ind, adj_list, mapAtlas, '/data/supervoxel/output/group468/surf/s', 'ArcaroAtlas');
 
 [sorted_z, sorted_i] = sort(z);
@@ -16,10 +16,8 @@ for i = 1:length(parcels)
     end
 end
 
-
-rng(3);
-%max_overlay = max(max(overlay{1}),max(overlay{2}));
-%Assumes overlay is in 59412 space
+% Assumes overlay is in 59412 space
+%rng(3);
 % max_overlay = max(overlay);
 % overlay_adj = cell(max_overlay,1);
 % for i = 1:max_overlay
@@ -42,16 +40,16 @@ rng(3);
 % colors = [0 0 0; 1 1 1; colors];
 % overlay = ConvertToOrigHem(overlay, orig_ind);
 
-max_overlay = max(overlay);
-palette = PTPalette(12);
-colors = repmat(palette,ceil(max_overlay/12),1);
-colors = colors(randperm(size(colors,1),max_overlay),:);
-colors = [0 0 0; 1 1 1; colors];
-overlay = ConvertToOrigHem(overlay, orig_ind);
+% max_overlay = max(overlay);
+% palette = PTPalette(12);
+% colors = repmat(palette,ceil(max_overlay/12),1);
+% colors = colors(randperm(size(colors,1),max_overlay),:);
+% colors = [0 0 0; 1 1 1; colors];
+% overlay = ConvertToOrigHem(overlay, orig_ind);
 
-% max_overlay = 15;
-% min_overlay = 0;
-% colors = PTcolormap(300, [min_overlay max_overlay]);
+max_overlay = 6; %0.4; 
+min_overlay = 0;% -0.08; 
+colors = PTcolormap(300, [min_overlay max_overlay]);
 
 % Inspired by Guillaume Flandin <Guillaume@artefact.tk> http://www.artefact.tk/software/matlab/gifti/
 fid = fopen(surface_template_file);
@@ -94,15 +92,19 @@ for hem = 1:2
         end
         parcel_overlay = overlay{hem}(parcel_tri);
         %gives borders
-        %parcel_overlay(~ismember(parcel_tri, orig_parcels{hem}{i})) = -1;
+        parcel_overlay(~ismember(parcel_tri, orig_parcels{hem}{i})) = -1;
         fid = fopen([save_prefix '_' num2str(hem) '_' num2str(i) '_' overlay_suffix '.clrs'], 'w');
         for f = 1:size(parcel_overlay,1)
             for v = 1:3
-                 val = parcel_overlay(f,v) + 2;
-                 fprintf(fid, '%f %f %f\n', colors(val,1), colors(val,2), colors(val,3));
+%                  val = parcel_overlay(f,v) + 2;
+%                  fprintf(fid, '%f %f %f\n', colors(val,1), colors(val,2), colors(val,3));
                 
-%                ind = max(min(round((parcel_overlay(f,v)-min_overlay)/(max_overlay-min_overlay)*size(colors,1)) + 1, size(colors,1)),1);
-%                fprintf(fid, '%f %f %f\n', colors(ind,1), colors(ind,2), colors(ind,3));
+               if (parcel_overlay(f,v)==-1)
+                   fprintf(fid, '0 0 0\n');
+               else
+                   ind = max(min(round((parcel_overlay(f,v)-min_overlay)/(max_overlay-min_overlay)*size(colors,1)) + 1, size(colors,1)),1);
+                   fprintf(fid, '%f %f %f\n', colors(ind,1), colors(ind,2), colors(ind,3));
+               end
                
 %                if (~all(parcel_overlay(f,:) == parcel_overlay(f,v)))
 %                    fprintf(fid, '0.000000 0.000000 0.000000\n');
@@ -114,7 +116,7 @@ for hem = 1:2
         fclose(fid);
         fprintf(fid_sizelist, '%d, ', 9*size(parcel_overlay,1));
         
-
+    continue;
         verts = unique(parcel_tri(:));
         inverse_ind = zeros(32492,1);
         inverse_ind(verts) = 1:length(verts);

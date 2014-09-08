@@ -2,7 +2,7 @@ function [subj_var] = CalcSubjVarianceExplained(z)
 subj = {'120515','113922','111413','109325','109123','108828','108525','108323','108121','107422','107321','106521','105014','104820','103111','102311','102008','101309','101107','101006'};
 
 subj_var = zeros(length(subj),1);
-for i = 3%randperm(length(subj))
+for i = randperm(length(subj))
     load(['../data/S500/' subj{i} '/bold']);
     bold = cast(bold, 'double');
     bold = bsxfun(@minus, bold, mean(bold,2));
@@ -15,18 +15,18 @@ for i = 3%randperm(length(subj))
     else
         base_sum = 0;
         for v1 = 1:N
-            if (mod(v1,100)==1)
-                disp([num2str(v1/N*100) '%']);
-            end
+            %if (mod(v1,100)==1)
+            %    disp([num2str(v1/N*100) '%']);
+            %end
             corrs = bold*(bold(v1,:)');
             base_sum = base_sum + sum(atanh(corrs(1:N > v1)));
         end
         base_mean = base_sum/(N*(N-1)/2);
         base_var = 0;
         for v1 = 1:N
-            if (mod(v1,100)==1)
-                disp([num2str(v1/N*100) '%']);
-            end
+            %if (mod(v1,100)==1)
+            %    disp([num2str(v1/N*100) '%']);
+            %end
             corrs = bold*(bold(v1,:)');
             base_var = base_var + sum((base_mean - atanh(corrs(1:N > v1))).^2);
         end
@@ -40,7 +40,7 @@ for i = 3%randperm(length(subj))
     
     sum_var = 0;
     for v1=1:length(bins)
-        disp(['Bins: ' num2str(v1/length(bins)*100) '%']);
+        %disp(['Bins: ' num2str(v1/length(bins)*100) '%']);
         for v2=v1:length(bins)
             x = atanh(bold(bins{v1},:)*(bold(bins{v2},:)'));
             if (v1==v2)
