@@ -33,6 +33,7 @@ for m = 1:length(maps)
     origin = Info.ORIGIN;
     step_size = Info.DELTA;
     map_coords = bsxfun(@plus, map_coords*diag(step_size), origin);
+    %map_coords(:,1:2) = -1*map_coords(:,1:2);
     
     [nearest,dists] = dsearchn(double(cell2mat(coords)),T,map_coords);
     nearest(dists > max_dist) = 0;

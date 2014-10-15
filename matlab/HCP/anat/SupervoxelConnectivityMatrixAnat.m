@@ -9,7 +9,7 @@ C = zeros(length(parcels),length(parcels));
 for i = 1:length(parcels)
     %fprintf('%d ', i);
     for j = (i+1):length(parcels)
-         C(i,j) = mean(mean(D(parcels{i},parcels{j})));
+         C(i,j) = log(mean(mean(exp(D(parcels{i},parcels{j})))));
 %         if (nargin < 3 || alpha == 0)
 %             C(i,j) = mean(mean(D(parcels{i},parcels{j})));
 %         elseif (isinf(alpha))
