@@ -1,5 +1,6 @@
 import numpy as np
 
+# Compute normalized mutual information between two parcellations
 def NMI(z1, z2):
 	N = len(z1)
 	assert N == len(z2)
@@ -24,6 +25,18 @@ def NMI(z1, z2):
 		NMI = MI/np.sqrt(H1*H2)
 
 	return NMI
+
+# (Approximately) return whether an array is symmetric
+def CheckSymApprox(D):
+    # Random indices to check for symmetry
+    sym_sub = np.random.randint(D.shape[0], size=(1000,2)) 
+    
+    a = np.ravel_multi_index((sym_sub[:,0],sym_sub[:,1]), dims=np.shape(D))
+    b = np.ravel_multi_index((sym_sub[:,1],sym_sub[:,0]), dims=np.shape(D))
+
+    sym = np.all(D.flat[a] == D.flat[b])
+    
+    return sym
 
 if __name__ == '__main__':
 	print('NMI test: ')

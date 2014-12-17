@@ -1,6 +1,5 @@
 import numpy as np
 import collections
-import sys
 import ddCRP
 import WardClustering
 import StatsUtil
@@ -42,6 +41,7 @@ def LearnSynth(type):
 
     return (WC,DC,DC_K)
 
+# Generate synthetic dataset (connectivity, adjacency, and coordinates) at given noise level
 def GenerateSynthData(type, sig):
     sqrtN = 18
     
@@ -129,6 +129,7 @@ def GenerateSynthData(type, sig):
     synth = SynthData(D, adj_list, z, coords)
     return synth
 
+# Generate synthetic connectivity matrix at given noise level
 def GenConnectivity(z, sig):
     N = len(z)
     K = len(np.unique(z))
@@ -144,6 +145,7 @@ def GenConnectivity(z, sig):
     return D
     
 
+# Normalize connectivity matrix to have zero mean and unit variance
 def NormalizeConn(D):
     D = D.astype('float64')
     N = D.shape[0]
@@ -156,6 +158,6 @@ def NormalizeConn(D):
     return D
 
 if __name__ == "__main__":
-    NMIs = LearnSynth(sys.argv[1]);
+    NMIs = LearnSynth('stripes');
     print('WC: ' + NMIs[0])
     print('DC: ' + NMIs[1])
