@@ -17,18 +17,19 @@ def LearnSynth(type):
     sigsq = 0.01;
     pass_limit = 30;
     
-    WC = np.zeros(max_noise,repeats)
-    DC = np.zeros(max_noise,repeats)
-    DC_K = np.zeros(max_noise,repeats)
+    WC = np.zeros((max_noise,repeats))
+    DC = np.zeros((max_noise,repeats))
+    DC_K = np.zeros((max_noise,repeats))
 
     for rep in range(repeats):
-        print('Repeat #' + rep)
+        print('Repeat #' + str(rep))
         for noise_sig in range(max_noise):
-            print('   Noise level: ' + noise_sig)
+            print('   Noise level: ' + str(noise_sig))
             synth = GenerateSynthData(type, noise_sig)
             D = NormalizeConn(synth.D)
 
             # ddCRP
+            import pdb; pdb.set_trace();
             Z = WardClustering.ClusterTree(D, synth.adj_list)
             dd_results = ddCRP.InitializeAndRun(Z, D, synth.adj_list, range(1,21), alpha, kappa, nu, sigsq, pass_limit, synth.z, 0)
             DC[noise_sig,rep] = dd_results[1].NMI[-1]
@@ -152,7 +153,7 @@ def NormalizeConn(D):
     off_diags = np.logical_not(np.eye(N,dtype='bool'))
     D = D - D[off_diags].mean()
     D = D/D[off_diags].std()
-    D.fill_diagonal(0)
+    np.fill_diagonal(D, 0)
 
     D = D.astype('float32')
     return D
