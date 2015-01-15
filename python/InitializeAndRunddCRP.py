@@ -1,19 +1,20 @@
 import numpy as np
-import scipy as sp
+from scipy import cluster
+from scipy import sparse
 import random
 import ddCRP
 import StatsUtil
 
-def InitializeAndRunddCRP(Z, D_norm, adj_list, sizes, alpha, kappa, nu, sigsq, pass_limit, gt_z, verbose):
+def InitializeAndRun(Z, D_norm, adj_list, sizes, alpha, kappa, nu, sigsq, pass_limit, gt_z, verbose):
 
     # Find highest-probability greedy parcellation to initialize
     logp = LogProbWC(D_norm, Z, sizes, alpha, kappa, nu, sigsq)
     max_i = np.argmax(logp)
-    z = sp.cluster.hierarchy.fcluster(Z, t=sizes[max_i], criterion = 'maxclust')
+    z = cluster.hierarchy.fcluster(Z, t=sizes[max_i], criterion = 'maxclust')
   
     # Construct a spanning tree within each cluster as initialization for c
     c = ClusterSpanningTrees(z, adj_list)
-    map_z, stats, pair_prob = ddCRP(D_norm, adj_list, c, gt_z, pass_limit, alpha, kappa, nu, sigsq, 1000, verbose)             
+    map_z, stats, pair_prob = ddCRP.ddCRP(D_norm, adj_list, c, gt_z, pass_limit, alpha, kappa, nu, sigsq, 1000, verbose)             
     return(map_z, stats, pair_prob)
 
 
@@ -24,7 +25,7 @@ def LogProbWC(D, Z, sizes, alpha, kappa, nu, sigsq):
     logp = np.zeros(len(sizes))
     
     for i in range(len(sizes)):
-        z = sp.cluster.hierarchy.fcluster(Z, t=sizes[i], criterion = 'maxclust')
+        z = cluster.hierarchy.fcluster(Z, t=sizes[i], criterion = 'maxclust')
 
         sorted_i = np.argsort(z)
         sorted_z = np.sort(z)
@@ -45,7 +46,7 @@ def ClusterSpanningTrees(z, adj_list):
     # Remove all adjacencies that cross clusters
     for i in range(nvox):
         adj_list[i] = adj_list[i][z[adj_list[i]]==z[i]]
-        adj_list[i]  = np.random.permuatation(adj_list[i])
+        adj_list[i]  = np.random.permutation(adj_list[i])
 
     # Construct sparse adjacency matrix
     neighbor_count = [len(neighbors) for neighbors in adj_list]
@@ -55,15 +56,15 @@ def ClusterSpanningTrees(z, adj_list):
         if neighbor_count[i] > 0:
             node_list[next_edge:(next_edge+neighbor_count[i])] = i
             next_edge = next_edge + neighbor_count[i]
-    G = sp.sparse.csc_matrix((np.ones(nvox),(np.arange(nvox),np.array(adj_list))), shape=(nvox,nvox)) 
+    G = sparse.csc_matrix((np.ones(len(node_list)),(node_list,np.hstack(adj_list))), shape=(nvox,nvox)) 
     
     # Construct spanning tree in each cluster
-    minT = sp.sparse.csgraph.minimum_spanning_tree(G) #creates minimum spanning tree
+    minT = sparse.csgraph.minimum_spanning_tree(G) #creates minimum spanning tree
     c = np.zeros(len(adj_list))
     for clust in np.unique(z):
         clust_vox = np.flatnonzero(z==clust)
-        rand_root=clust_vox[random.randint(1,len(clust_vox))]
-        _,parents = sp.sparse.csgraph.breadth_first_order(minT,rand_root, directed=False) 
+        rand_root=clust_vox[random.randint(1,len(clust_vox)-1)]
+        _,parents = sparse.csgraph.breadth_first_order(minT,rand_root, directed=False) 
         c[clust_vox] = parents[clust_vox] 
     
     # Roots have parent value of -9999, set them to be their own parent

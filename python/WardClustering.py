@@ -1,11 +1,11 @@
 import numpy as np
-import scipy.spatial as sp
-import scipy.cluster as cl
+from scipy import spatial
+from scipy import cluster
 import StatsUtil
 import math as mt
 
 def Cluster(Z, n):
-    z = cl.hierarchy.fcluster(Z, t=n, criterion = 'maxclust')
+    z = cluster.hierarchy.fcluster(Z, t=n, criterion = 'maxclust')
     return z
 
 def ClusterTree(D, adj_list):
@@ -17,14 +17,14 @@ def ClusterTree(D, adj_list):
     # Compute squared euclidean distance Y between rows
     Qx = np.tile(np.linalg.norm(X, axis=1)**2,(X.shape[0],1))
     Y = Qx + Qx.transpose()-2*np.dot(X, X.transpose())
-    Y = sp.distance.squareform(Y,checks=False)
+    Y = spatial.distance.squareform(Y,checks=False)
     
     # Construct adjacency matrix
     N = len(adj_list)
     A = np.zeros([N,N], dtype=bool)
     for i in range(N):
         A[i,adj_list[i]] = True
-    connected = sp.distance.squareform(A).astype(bool)
+    connected = spatial.distance.squareform(A).astype(bool)
     
 
     # Initialize all data structures

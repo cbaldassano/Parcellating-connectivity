@@ -1,8 +1,8 @@
 import numpy as np
 import collections
-import ddCRP
 import WardClustering
 import StatsUtil
+import InitializeAndRunddCRP as initdd
 
 def LearnSynth(type):
 
@@ -29,9 +29,8 @@ def LearnSynth(type):
             D = NormalizeConn(synth.D)
 
             # ddCRP
-            import pdb; pdb.set_trace();
             Z = WardClustering.ClusterTree(D, synth.adj_list)
-            dd_results = ddCRP.InitializeAndRun(Z, D, synth.adj_list, range(1,21), alpha, kappa, nu, sigsq, pass_limit, synth.z, 0)
+            dd_results = initdd.InitializeAndRun(Z, D, synth.adj_list, range(1,21), alpha, kappa, nu, sigsq, pass_limit, synth.z, 0)
             DC[noise_sig,rep] = dd_results[1].NMI[-1]
             DC_K[noise_sig,rep] = dd_results[1].K[-1]
 

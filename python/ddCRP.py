@@ -1,6 +1,6 @@
 import numpy as np
-import scipy as sp
-import collections
+from scipy import special
+from scipy import sparse
 import random as rd
 import math as mt
 import time
@@ -8,14 +8,13 @@ import StatsUtil
 
 def ddCRP(D, adj_list, init_c, gt_z, num_passes, alpha, kappa, nu, sigsq, stats_interval, verbose):
     map_z =  np.zeros(np.shape(D)[0])
-    StatStruct = collections.namedtuple('Stats',['times','lp','NMI','K','z','c'])
-    stats = StatStruct
+    stats = {'times':[], 'lp':[], 'NMI':[], 'K':[], 'z':[], 'c':[]}
     
     hyp = ComputeCachedLikelihoodTerms(kappa, nu, sigsq)
     nvox=len(adj_list)
     
     # Generate random initialization if not specified
-    if not init_c:
+    if init_c.size==0:
         c = np.zeros(nvox)
         for i in range(nvox):
             neighbors = np.concatenate((adj_list[i], i),axis=1) 
@@ -23,7 +22,7 @@ def ddCRP(D, adj_list, init_c, gt_z, num_passes, alpha, kappa, nu, sigsq, stats_
     else:
         c = init_c
             
-    G = sp.sparse.csc_matrix((np.ones(nvox),(np.arange(nvox),c)), shape=(nvox,nvox))
+    G = sparse.csc_matrix((np.ones(nvox),(np.arange(nvox),c)), shape=(nvox,nvox))
     K, z, parcels = ConnectedComp(G)
     
     sym = StatsUtil.CheckSymApprox(D)
@@ -34,7 +33,7 @@ def ddCRP(D, adj_list, init_c, gt_z, num_passes, alpha, kappa, nu, sigsq, stats_
     t0 = time.clock()
     
     for curr_pass in range(num_passes):
-        order = np.random.permutation(len(nvox))
+        order = np.random.permutation(nvox)
         
         for i in order:
             if curr_lp > max_lp:
@@ -69,9 +68,10 @@ def ddCRP(D, adj_list, init_c, gt_z, num_passes, alpha, kappa, nu, sigsq, stats_
                 elif z_rem[n] != z_rem[i]:  # Not already clustered with n
                     lp[n_ind] = LikelihoodDiff(D, parcels_rem, z_rem[i], z_rem[n], hyp, sym)
             
+            import pdb; pdb.set_trace();
             # Pick new edge proportional to probability
             new_neighbor = ChooseFromLP(lp)
-            if new_neighbor <= len(adj_list_i):
+            if new_neighbor < len(adj_list_i):
                 c[i] = adj_list_i[new_neighbor]
             else:
                 c[i] = i
@@ -88,7 +88,7 @@ def ddCRP(D, adj_list, init_c, gt_z, num_passes, alpha, kappa, nu, sigsq, stats_
 
 def ConnectedComp(G):
     # Compute connected components (number and component labels)
-    K, z = sp.sparse.csgraph.connected_components(G,directed=False,connection='weak',return_labels=True)
+    K, z = sparse.csgraph.connected_components(G,directed=False,connection='weak',return_labels=True)
 
     sorted_i = np.argsort(z)
     sorted_z = np.sort(z)
@@ -201,17 +201,17 @@ def MergeSuffStats(s_m):
     
 # Update diagnostic stats
 def UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, verbose):    
-    stats.lp.append(curr_lp)
-    stats.K.append(K)
-    stats.z.append(z)
-    stats.c.append(c)
+    stats['lp'].append(curr_lp)
+    stats['K'].append(K)
+    stats['z'].append(z)
+    stats['c'].append(c)
     curr_time = time.clock() - t0
-    stats.times.append(curr_time)
+    stats['times'].append(curr_time)
     if verbose:
         print('Step: ' + str(steps) + ' Time: ' + str(curr_time) + ' LP: ' + str(curr_lp) + ' K: ' + str(K))
 
-    if gt_z:
-        stats.NMI.append(StatsUtil.CalcNMI(gt_z, map_z))
+    if gt_z.size > 0:
+        stats['NMI'].append(StatsUtil.NMI(gt_z, map_z))
 
     return stats
 
@@ -273,14 +273,14 @@ def LogLikelihood(stats, hyp):
     stats = stats[stats[:,0]>1,:]
     # stats = [N | mu | sumsq]
     # hyp = [mu0 kappa0 nu0 sigsq0 nu0*sigsq0 const_logp_terms] as type list
-    kappa = hyp[1] + stats[:,0] #kappa = hyp(2) + stats(:,1)
-    nu = hyp[2] + stats[:,0] #hyp(3) + stats(:,1)
-    # nu_sigsq = hyp(5) + sumSqX + (n*hyp(2)) / (hyp(2)+n) * (hyp(1) - meanX)^2;
+    kappa = hyp[1] + stats[:,0]
+    nu = hyp[2] + stats[:,0]
     # Assume mu0=0 and kappa0 << n
     nu_sigsq = hyp[4] + stats[:,2] + hyp[1] * (stats[:,1])**2
     
     #logp = sum(hyp(6) + gammaln(nu/2)- 0.5*log(kappa) - (nu/2).*log(nu_sigsq)- (stats(:,1)/2)*log(pi))    
-    logp = np.sum(hyp[5] + mt.lgamma(nu/2)- 0.5*mt.log(kappa) - (nu/2)*mt.log(nu_sigsq)- (stats[:,0]/2)*mt.log(mt.pi))
+    logp = np.sum(hyp[5] + special.gammaln(nu/2)- 0.5*np.log(kappa) - \
+        (nu/2)*np.log(nu_sigsq)- (stats[:,0]/2)*np.log(mt.pi))
   
     return logp
 
