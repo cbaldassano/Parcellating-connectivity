@@ -1,6 +1,6 @@
 function DrawCounties(z)
-load('../data/ACS/flowMerged.mat');
-load('../data/ACS/stateData');
+load('../../../data/ACS/flowMerged.mat');
+load('../../../data/ACS/stateData');
 figure('Color',[1 1 1],'Position',[1146         646         973         587]); hold on;
 for i = 1:2594
     for j = 1:length(borders{i})

@@ -4,6 +4,17 @@ import WardClustering
 import StatsUtil
 import InitializeAndRunddCRP as initdd
 
+from pylab import *
+import math as mt
+def PlotAdj(adj_list):
+    for i in range(len(adj_list)):
+        x1 = mt.floor(i/18)
+        y1 = i-x1*18
+        for j in adj_list[i]:
+            x2 = mt.floor(j/18)
+            y2 = j-x2*18
+            plot([x1, x2], [y1, y2], color='k', linestyle='-', linewidth=2)
+
 def LearnSynth(type):
 
     np.random.seed(1)
@@ -23,21 +34,23 @@ def LearnSynth(type):
 
     for rep in range(repeats):
         print('Repeat #' + str(rep))
-        for noise_sig in range(max_noise):
+        for noise_sig in [5]:#range(max_noise):
             print('   Noise level: ' + str(noise_sig))
             synth = GenerateSynthData(type, noise_sig)
             D = NormalizeConn(synth.D)
 
             # ddCRP
             Z = WardClustering.ClusterTree(D, synth.adj_list)
-            dd_results = initdd.InitializeAndRun(Z, D, synth.adj_list, range(1,21), alpha, kappa, nu, sigsq, pass_limit, synth.z, 0)
-            DC[noise_sig,rep] = dd_results[1].NMI[-1]
-            DC_K[noise_sig,rep] = dd_results[1].K[-1]
+            _,dd_stats = initdd.InitializeAndRun(Z, D, synth.adj_list, range(1,21), alpha, kappa, nu, sigsq, pass_limit, synth.z, 1)
+            DC[noise_sig,rep] = dd_stats['NMI'][-1]
+            DC_K[noise_sig,rep] = dd_stats['K'][-1]
 
             n_clust = DC_K[noise_sig,rep]
 
             # Ward Clustering
             WC[noise_sig, rep] = StatsUtil.NMI(synth.z, WardClustering.Cluster(Z, n_clust))
+
+            print('   Ward = ' + str(WC[noise_sig, rep]) + ', ddCRP = ' + str(DC[noise_sig,rep]))
 
     return (WC,DC,DC_K)
 
@@ -158,6 +171,6 @@ def NormalizeConn(D):
     return D
 
 if __name__ == "__main__":
-    NMIs = LearnSynth('stripes');
-    print('WC: ' + NMIs[0])
-    print('DC: ' + NMIs[1])
+    WC,DC,DC_K = LearnSynth('stripes');
+    print('WC: ' + str(np.mean(WC,axis=1)))
+    print('DC: ' + str(np.mean(DC,axis=1)))

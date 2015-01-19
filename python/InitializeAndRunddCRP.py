@@ -14,8 +14,8 @@ def InitializeAndRun(Z, D_norm, adj_list, sizes, alpha, kappa, nu, sigsq, pass_l
   
     # Construct a spanning tree within each cluster as initialization for c
     c = ClusterSpanningTrees(z, adj_list)
-    map_z, stats, pair_prob = ddCRP.ddCRP(D_norm, adj_list, c, gt_z, pass_limit, alpha, kappa, nu, sigsq, 1000, verbose)             
-    return(map_z, stats, pair_prob)
+    map_z, stats = ddCRP.ddCRP(D_norm, adj_list, c, gt_z, pass_limit, alpha, kappa, nu, sigsq, 1000, verbose)             
+    return(map_z, stats)
 
 
 # Compute probability of each clustering
@@ -41,7 +41,11 @@ def LogProbWC(D, Z, sizes, alpha, kappa, nu, sigsq):
 
     
 # Create spanning trees within each cluster, have each element point to its parent
-def ClusterSpanningTrees(z, adj_list):    
+def ClusterSpanningTrees(z, adj_list):
+
+    # We're going to remove edges from adj_list, so make a copy
+    adj_list = adj_list.copy()
+    
     nvox = len(adj_list)
     # Remove all adjacencies that cross clusters
     for i in range(nvox):

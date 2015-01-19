@@ -6,6 +6,26 @@ import math as mt
 import time
 import StatsUtil
 
+
+from pylab import *
+def PlotC(c):
+    for i in range(len(c)):
+        x1 = mt.floor(i/18)
+        y1 = i-x1*18
+        x2 = mt.floor(c[i]/18)
+        y2 = c[i]-x2*18
+
+        plot([x1, x2], [y1, y2], color='k', linestyle='-', linewidth=2)
+def PlotAdj(adj_list):
+    for i in range(len(adj_list)):
+        x1 = mt.floor(i/18)
+        y1 = i-x1*18
+        for j in adj_list[i]:
+            x2 = mt.floor(j/18)
+            y2 = j-x2*18
+            plot([x1, x2], [y1, y2], color='k', linestyle='-', linewidth=2)
+
+
 def ddCRP(D, adj_list, init_c, gt_z, num_passes, alpha, kappa, nu, sigsq, stats_interval, verbose):
     map_z =  np.zeros(np.shape(D)[0])
     stats = {'times':[], 'lp':[], 'NMI':[], 'K':[], 'z':[], 'c':[]}
@@ -22,7 +42,7 @@ def ddCRP(D, adj_list, init_c, gt_z, num_passes, alpha, kappa, nu, sigsq, stats_
     else:
         c = init_c
             
-    G = sparse.csc_matrix((np.ones(nvox),(np.arange(nvox),c)), shape=(nvox,nvox))
+    G = sparse.coo_matrix((np.ones(nvox),(np.arange(nvox),c)), shape=(nvox,nvox))
     K, z, parcels = ConnectedComp(G)
     
     sym = StatsUtil.CheckSymApprox(D)
@@ -44,31 +64,37 @@ def ddCRP(D, adj_list, init_c, gt_z, num_passes, alpha, kappa, nu, sigsq, stats_
                 stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, verbose);
         
             # Compute change in log-prob when removing the edge c_i
+            CooModifyRow(G, i, -1)
             if c[i] == i:
-                rem_delta_lp = -mt.log(alpha)
-                z_rem = z 
-                parcels_rem = parcels
+                rem_delta_lp, z_rem, parcels_rem = -mt.log(alpha), z, parcels
             else:
-                G[i,c[i]] = 0
                 K_rem, z_rem, parcels_rem = ConnectedComp(G)
                 
                 if K_rem != K:
                     rem_delta_lp = -LikelihoodDiff(D, parcels_rem, z_rem[i], z_rem[c[i]], hyp, sym)
                 else:
                     rem_delta_lp = 0
-            
+
             # Compute change in log-prob for each possible edge c_i
             adj_list_i = adj_list[i]
             lp = np.zeros((len(adj_list_i)+1))
             lp[len(adj_list_i)] = mt.log(alpha)
+            cached_merge = -1*np.ones(len(adj_list_i), dtype=int32)
             for n_ind in range(len(adj_list_i)):
                 n = adj_list_i[n_ind]
-                if z_rem[n] == z_rem[c[i]]: # Clustered with old neighbor
-                    lp[n_ind] = -rem_delta_lp
-                elif z_rem[n] != z_rem[i]:  # Not already clustered with n
-                    lp[n_ind] = LikelihoodDiff(D, parcels_rem, z_rem[i], z_rem[n], hyp, sym)
+                if z_rem[n] == z_rem[c[i]]:
+                    # Just undoing edge removal
+                    lp[n_ind] = -rem_delta_lp - (c[i] == i)*mt.log(alpha)
+                elif z_rem[n] != z_rem[i]:
+                    # Proposing novel merge
+                    # First check cache to see if this is already computed
+                    prev_lp = np.flatnonzero(cached_merge == z_rem[n])
+                    if prev_lp.size > 0:
+                        lp[n_ind] = lp[prev_lp[0]]
+                    else:
+                        lp[n_ind] = LikelihoodDiff(D, parcels_rem, z_rem[i], z_rem[n], hyp, sym)
+                        cached_merge[n_ind] = z_rem[n]
             
-            import pdb; pdb.set_trace();
             # Pick new edge proportional to probability
             new_neighbor = ChooseFromLP(lp)
             if new_neighbor < len(adj_list_i):
@@ -77,12 +103,12 @@ def ddCRP(D, adj_list, init_c, gt_z, num_passes, alpha, kappa, nu, sigsq, stats_
                 c[i] = i
                 
             curr_lp = curr_lp + rem_delta_lp + lp[new_neighbor]
-            G[i,c[i]] = 1
+            CooModifyRow(G, i, c[i])
             K, z, parcels = ConnectedComp(G)
             steps = steps + 1
+
             
-    stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, verbose)    
-        
+    stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, verbose)
     return (map_z, stats)
 
 
@@ -114,7 +140,7 @@ def LikelihoodDiff(D, parcels_split, split_i1, split_i2, hyp, sym):
                     samples = [];
             else: 
                 samples = samples.ravel()
-            s[:,i,split_ind] = SufficientStats(samples)  
+            s[i,split_ind,:] = SufficientStats(samples)  
         
         # If not symmetric, get all connections from split_ind parcel
         if not sym:
@@ -125,7 +151,7 @@ def LikelihoodDiff(D, parcels_split, split_i1, split_i2, hyp, sym):
                     samples = samples[off_diags]
                 else:
                     samples = samples.ravel()
-                s[:,split_ind,i] = SufficientStats(samples)
+                s[split_ind,i,:] = SufficientStats(samples)
     
     # Compute log-likelihood of all sufficient stats for split parcels
     if sym:
@@ -141,14 +167,14 @@ def LikelihoodDiff(D, parcels_split, split_i1, split_i2, hyp, sym):
     
 
     # Compute log-likelihood for all merged parcels
-    m = np.zeros(2, K, 3)
+    m = np.zeros((2, K, 3))
     # Compute merges for all off-diagonal parcels
     for dir in range(2):
         if dir ==1:
             if sym:
                 break
             else:
-                np.transpose(s, (1, 0, 2))
+                s = np.transpose(s, (1, 0, 2))
 
         for i in range(K):
             if i != split_i1 and i != split_i2:
@@ -167,14 +193,14 @@ def LikelihoodDiff(D, parcels_split, split_i1, split_i2, hyp, sym):
     else:
         # Compute central diagonal merge
         m_central = MergeSuffStats(np.concatenate((
-            MergeSuffStats(np.reshape(s[split_i1, (split_i1, split_i2), :], (2,3))),
-            MergeSuffStats(np.reshape(s[split_i2, (split_i1, split_i2), :], (2,3))))))
+            MergeSuffStats(np.reshape(s[split_i1, (split_i1, split_i2), :], (2,3))).reshape((1,3)),
+            MergeSuffStats(np.reshape(s[split_i2, (split_i1, split_i2), :], (2,3))).reshape((1,3)))))
 
         # Compute log-likelihood of all sufficient stats for merged parcels
         merge_ll = LogLikelihood(np.concatenate((
             np.reshape(m[0,:,:], (-1,3)),
             np.reshape(m[1,:,:], (-1,3)),
-            m_central)), hyp)
+            m_central.reshape((1,3)))), hyp)
     
     ld = merge_ll - split_ll                    
     return ld
@@ -184,7 +210,7 @@ def SufficientStats(samples):
     suffstats = np.zeros(3)
     
     if len(samples)==0: 
-        return
+        return suffstats
     
     suffstats[0] = len(samples)
     suffstats[1] = np.sum(samples)/suffstats[0]
@@ -271,18 +297,21 @@ def FullProbabilityddCRP(D, c, parcels, alpha, hyp, sym):
 # Compute log-likelihood of model given suff stats
 def LogLikelihood(stats, hyp):
     stats = stats[stats[:,0]>1,:]
-    # stats = [N | mu | sumsq]
-    # hyp = [mu0 kappa0 nu0 sigsq0 nu0*sigsq0 const_logp_terms] as type list
-    kappa = hyp[1] + stats[:,0]
-    nu = hyp[2] + stats[:,0]
-    # Assume mu0=0 and kappa0 << n
-    nu_sigsq = hyp[4] + stats[:,2] + hyp[1] * (stats[:,1])**2
-    
-    #logp = sum(hyp(6) + gammaln(nu/2)- 0.5*log(kappa) - (nu/2).*log(nu_sigsq)- (stats(:,1)/2)*log(pi))    
-    logp = np.sum(hyp[5] + special.gammaln(nu/2)- 0.5*np.log(kappa) - \
-        (nu/2)*np.log(nu_sigsq)- (stats[:,0]/2)*np.log(mt.pi))
+    if stats.size > 0:
+        # stats = [N | mu | sumsq]
+        # hyp = [mu0 kappa0 nu0 sigsq0 nu0*sigsq0 const_logp_terms] as type list
+        kappa = hyp[1] + stats[:,0]
+        nu = hyp[2] + stats[:,0]
+        # Assume mu0=0 and kappa0 << n
+        nu_sigsq = hyp[4] + stats[:,2] + hyp[1] * (stats[:,1])**2
+        
+        #logp = sum(hyp(6) + gammaln(nu/2)- 0.5*log(kappa) - (nu/2).*log(nu_sigsq)- (stats(:,1)/2)*log(pi))    
+        logp = np.sum(hyp[5] + special.gammaln(nu/2)- 0.5*np.log(kappa) - \
+            (nu/2)*np.log(nu_sigsq)- (stats[:,0]/2)*np.log(mt.pi))
   
-    return logp
+        return logp
+    else:
+        return 0
 
 # Randomly choose index based on unnormalized log probabilities
 def ChooseFromLP(lp):
@@ -294,3 +323,15 @@ def ChooseFromLP(lp):
     cumP = np.cumsum(p)
     i = np.where(cumP>random.random())[0][0]
     return i
+
+# Insert value in coo_matrix at row,col, or remove row if col==-1
+def CooModifyRow(G,row,col):
+    if col == -1:
+        G.row = np.delete(G.row,row)
+        G.col = np.delete(G.col,row)
+        G.data = np.delete(G.data,row)
+    else:
+        G.row = np.insert(G.row, row, row)
+        G.col = np.insert(G.col, row, col)
+        G.data = np.insert(G.data, row, 1)
+    return G

@@ -60,11 +60,11 @@ for pass = 1:num_passes
             stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, pid, verbose);
         end
         
+        G(i,c(i)) = 0;
         if (c(i) == i)
             rem_delta_lp = -log(alpha);
             z_rem = z; parcels_rem = parcels;
         else
-            G(i,c(i)) = 0;
             [K_rem, z_rem, parcels_rem] = ConnectedComp(G);
             if (K_rem ~= K)
                 rem_delta_lp = -LikelihoodDiff(D, ...
@@ -77,12 +77,22 @@ for pass = 1:num_passes
         adj_list_i = adj_list{i};
         lp = zeros(length(adj_list_i)+1, 1);
         lp(end) = log(alpha);
+        cached_merge = zeros(length(adj_list_i),1);
         for n_ind = 1:length(adj_list_i)
             n = adj_list_i(n_ind);
-            if (z_rem(n) == z_rem(c(i)))  % Clustered with old neighbor
-                lp(n_ind) = -rem_delta_lp;
-            elseif (z_rem(n) ~= z_rem(i))  % Not already clustered with n
-                lp(n_ind) = LikelihoodDiff(D, parcels_rem, z_rem(i), z_rem(n), hyp, sym);
+            if (z_rem(n) == z_rem(c(i)))
+                % Just undoing edge removal
+                lp(n_ind) = -rem_delta_lp - (c(i)==i)*log(alpha);
+            elseif (z_rem(n) ~= z_rem(i)) 
+                % Proposing novel merge
+                % First check cache to see if this is already computed
+                prev_lp = find(cached_merge == z_rem(n),1);
+                if (~isempty(prev_lp))
+                    lp(n_ind) = lp(prev_lp);
+                else
+                    lp(n_ind) = LikelihoodDiff(D, parcels_rem, z_rem(i), z_rem(n), hyp, sym);
+                    cached_merge(n_ind) = z_rem(n);
+                end
             end
         end
         
