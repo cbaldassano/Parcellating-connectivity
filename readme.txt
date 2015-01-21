@@ -15,7 +15,7 @@ The code was developed under MATLAB version 7.13.0.564 (R2011b), but should
 run in any recent MATLAB version. It does not rely on any external libraries.
 
 python:
-A demon of the method on synthetic data can be run with the command
+A demo of the method on synthetic data can be run with the command
 python LearnSynth.py
 which will print out the NMI performance of Ward clustering versus our
 dd-CRP clustering, at 10 different noise levels, as in Figure 2 of the paper.
