@@ -3,30 +3,20 @@ import collections
 import WardClustering
 import StatsUtil
 import InitializeAndRunddCRP as initdd
+from multiprocessing import Pool
 
-from pylab import *
-import math as mt
-def PlotAdj(adj_list):
-    for i in range(len(adj_list)):
-        x1 = mt.floor(i/18)
-        y1 = i-x1*18
-        for j in adj_list[i]:
-            x2 = mt.floor(j/18)
-            y2 = j-x2*18
-            plot([x1, x2], [y1, y2], color='k', linestyle='-', linewidth=2)
+# Format of generated synthetic datasets
+SynthData = collections.namedtuple('SynthData',['D','adj_list','z','coords'])
 
+# Main function: Computes a parcellation of synthetic data at different noise
+#   levels, using Ward Clustering and our method based on the ddCRP. Each
+#   parcellation is evaluated based on its Normalized Mututal Information
+#   with the ground truth. The input "type"={'square','stripes','face'}
+#   determines the underlying ground truth parcellation.
 def LearnSynth(type):
-
-    np.random.seed(1)
-    max_noise = 10;
-    repeats = 20;
-
-    # ddCRP hyperparameters
-    alpha = 10;
-    kappa = 0.0001;
-    nu = 1;
-    sigsq = 0.01;
-    pass_limit = 30;
+    np.random.seed(1)   # For repeatability
+    max_noise = 10;     # Number of noise levels to try
+    repeats = 20;       # Number of times to repeat experiments
     
     WC = np.zeros((max_noise,repeats))
     DC = np.zeros((max_noise,repeats))
@@ -34,31 +24,52 @@ def LearnSynth(type):
 
     for rep in range(repeats):
         print('Repeat #' + str(rep))
-        for noise_sig in [5]:#range(max_noise):
-            print('   Noise level: ' + str(noise_sig))
-            synth = GenerateSynthData(type, noise_sig)
-            D = NormalizeConn(synth.D)
+        all_synth = [GenerateSynthData(type, noise_sig) 
+                        for noise_sig in range(max_noise)]
 
-            # ddCRP
-            Z = WardClustering.ClusterTree(D, synth.adj_list)
-            _,dd_stats = initdd.InitializeAndRun(Z, D, synth.adj_list, range(1,21), alpha, kappa, nu, sigsq, pass_limit, synth.z, 1)
-            DC[noise_sig,rep] = dd_stats['NMI'][-1]
-            DC_K[noise_sig,rep] = dd_stats['K'][-1]
+        # Run all noise levels in parallel
+        p = Pool(processes=max_noise)
+        all_res = p.map(LearnSynthForDataset, all_synth)
+        p.close()
+        p.join()
+        WC[:,rep] = [res[0] for res in all_res]
+        DC[:,rep] = [res[1] for res in all_res]
+        DC_K[:,rep] = [res[2] for res in all_res]
 
-            n_clust = DC_K[noise_sig,rep]
+    return (WC, DC, DC_K)
 
-            # Ward Clustering
-            WC[noise_sig, rep] = StatsUtil.NMI(synth.z, WardClustering.Cluster(Z, n_clust))
 
-            print('   Ward = ' + str(WC[noise_sig, rep]) + ', ddCRP = ' + str(DC[noise_sig,rep]))
+# Compute Ward clustering and our parcellation for a specific synthetic
+#   (previously generated) dataset
+def LearnSynthForDataset(synth):
+    # Hyperparameters
+    alpha = 10;
+    kappa = 0.0001;
+    nu = 1;
+    sigsq = 0.01;
+    pass_limit = 30;
+
+    D = NormalizeConn(synth.D)  # Normalize connectivity to zero mean, unit var
+
+    # Compute our ddCRP-based parcellation
+    Z = WardClustering.ClusterTree(D, synth.adj_list)
+    _,dd_stats = initdd.InitializeAndRun(Z, D, synth.adj_list, range(1,21),
+                    alpha, kappa, nu, sigsq, pass_limit, synth.z, 0)
+    DC = dd_stats['NMI'][-1]
+    DC_K = dd_stats['K'][-1]
+
+    # Ward Clustering, using number of clusters discovered from our method
+    WC = StatsUtil.NMI(synth.z, WardClustering.Cluster(Z, DC_K))
 
     return (WC,DC,DC_K)
 
-# Generate synthetic dataset (connectivity, adjacency, and coordinates) at given noise level
+# Generate synthetic dataset of "type"={'square','stripes','face'} at a given
+#   noise level "sig". Returns a SynthData object containing a connectivity
+#   matrix D, and adjacency list adj_list, ground truth parcellation z, and
+#   element coordinates coords
 def GenerateSynthData(type, sig):
     sqrtN = 18
-    
-    SynthData = collections.namedtuple('SynthData',['D','adj_list','z','coords'])
+
     coords = np.zeros((sqrtN**2,2))
     adj_list = np.empty(sqrtN**2, dtype=object)
     for r in range(0, sqrtN):
@@ -137,13 +148,6 @@ def GenerateSynthData(type, sig):
         2,2,2,2,2,2,5,5,5,5,5,5,8,8,8,8,8,8,
         2,2,2,2,2,2,5,5,5,5,5,5,8,8,8,8,8,8])
     
-    D = GenConnectivity(z, sig)
-    
-    synth = SynthData(D, adj_list, z, coords)
-    return synth
-
-# Generate synthetic connectivity matrix at given noise level
-def GenConnectivity(z, sig):
     N = len(z)
     K = len(np.unique(z))
     
@@ -155,10 +159,11 @@ def GenConnectivity(z, sig):
             if v1 != v2:
                 D[v1,v2] = sig*np.random.normal() + A[z[v1],z[v2]]
     
-    return D
-    
+    synth = SynthData(D, adj_list, z, coords)
+    return synth
 
-# Normalize connectivity matrix to have zero mean and unit variance
+
+# Normalize connectivity matrix "D" to have zero mean and unit variance
 def NormalizeConn(D):
     D = D.astype('float64')
     N = D.shape[0]
@@ -170,6 +175,7 @@ def NormalizeConn(D):
     D = D.astype('float32')
     return D
 
+# If this file is run at the command line, perform a demo
 if __name__ == "__main__":
     WC,DC,DC_K = LearnSynth('stripes');
     print('WC: ' + str(np.mean(WC,axis=1)))

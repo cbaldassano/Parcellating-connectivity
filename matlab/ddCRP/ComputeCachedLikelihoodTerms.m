@@ -1,3 +1,4 @@
+% Precompute and package hyperparameter expressions into vector form
 function cached = ComputeCachedLikelihoodTerms( kappa, nu, sigsq )
 
 cached = [ ...

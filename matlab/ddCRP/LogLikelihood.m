@@ -1,3 +1,6 @@
+% Computes sum of log-likelihood terms for given sufficient statistics (in Nx3
+%   matrix, with columns [count, mean, sum of squared dev]) and vectorized
+%   hyperparameters
 function logp = LogLikelihood(stats, hyp)
 
 stats = stats(stats(:,1)>1,:);

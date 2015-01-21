@@ -1,3 +1,7 @@
+% Generate synthetic dataset of "type"={'square','stripes','face'} at a given
+%   noise level "sig". Returns a dataset containing a connectivity
+%   matrix D, and adjacency list adj_list, ground truth parcellation z, and
+%   element coordinates coords
 function [D adj_list z coords] = GenerateSynthData(type, sig)
 
 sqrtN = 18;
@@ -86,10 +90,6 @@ elseif (strcmp(type, 'face'))
      1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2];
 end
 
-D = GenConnectivity(z, sig);
-end
-
-function D = GenConnectivity(z, sig)
 
 N = length(z);
 K = length(unique(z));
@@ -104,4 +104,5 @@ for v1 = 1:N
         end
     end
 end
+
 end

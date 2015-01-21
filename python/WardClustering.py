@@ -4,10 +4,16 @@ from scipy import cluster
 import StatsUtil
 import math as mt
 
+# Just a wrapper function that computes the parcellation with n parcels from
+#   the linkage matrix Z
 def Cluster(Z, n):
     z = cluster.hierarchy.fcluster(Z, t=n, criterion = 'maxclust')
     return z
 
+# Computes the Ward clustering linkage matrix Z for a given connectivity
+#   matrix D and spatial adjacency specified by adj_list. This output can then
+#   be fed to the Cluster function to get a parcellation of a specific size
+#   This is based largely on the Matlab linkage function.
 def ClusterTree(D, adj_list):
     if StatsUtil.CheckSymApprox(D):
         X = D
@@ -18,6 +24,7 @@ def ClusterTree(D, adj_list):
     Qx = np.tile(np.linalg.norm(X, axis=1)**2,(X.shape[0],1))
     Y = Qx + Qx.transpose()-2*np.dot(X, X.transpose())
     Y = spatial.distance.squareform(Y,checks=False)
+    Y[Y<0] = 0  # Correct for numerical errors in very similar rows
     
     # Construct adjacency matrix
     N = len(adj_list)
@@ -31,7 +38,7 @@ def ClusterTree(D, adj_list):
     valid_clusts = np.ones(N, dtype=bool)   # which clusters still remain
     col_limits = np.cumsum(np.concatenate((np.array([N-2]), np.arange(N-2, 0, -1))))
     
-    # during updating clusters, cluster index is constantly changing, R is
+    # During updating clusters, cluster index is constantly changing, R is
     # a index vector mapping the original index to the current (row, column)
     # index in Y.  C denotes how many points are contained in each cluster.
     m = mt.ceil(mt.sqrt(2*Y.shape[0]))
@@ -73,8 +80,8 @@ def ClusterTree(D, adj_list):
         U[np.array([i,j])] = 0
         I = PdistInds(i, N, U)
         J = PdistInds(j, N, U)
-        
-        Y[I] = ((C[R[U]]+C[R[i]])*Y[I] + (C[R[U]]+C[R[j]])*Y[J] - C[R[U]]*v)/(C[R[i]]+C[R[j]]+C[R[U]])
+        Y[I] = ((C[R[U]]+C[R[i]])*Y[I] + 
+                (C[R[U]]+C[R[j]])*Y[J] - C[R[U]]*v)/(C[R[i]]+C[R[j]]+C[R[U]])
         
         # Add j's connections to new cluster i
         new_conns = connected[J] & ~connected[I]
@@ -84,7 +91,8 @@ def ClusterTree(D, adj_list):
         # Remove all of j's connections from conn_inds and connected
         U[i]=1
         J = PdistInds(j, N, U)
-        conn_inds = conn_inds[np.in1d(conn_inds,J,assume_unique=True,invert=True)]
+        conn_inds = conn_inds[np.in1d(conn_inds,J, assume_unique=True,
+                                                                invert=True)]
         connected[J] = np.zeros(len(J))
        
         valid_clusts[j] = 0 
@@ -92,11 +100,12 @@ def ClusterTree(D, adj_list):
         C[m+s] = C[R[i]] + C[R[j]]
         Z[s,3] = C[m+s]
         R[i] = m+s
-       
+
     Z[:,2] = np.sqrt(Z[:,2])
     return Z
 
-# Compute positions in distance vector for a given row
+# Compute positions in distance vector (for NxN matrix) for a given row. Results
+#   are masked by the valid_flags boolean vector
 def PdistInds(row, N, valid_flags):
     if row > 0:
         inds1 = np.concatenate((

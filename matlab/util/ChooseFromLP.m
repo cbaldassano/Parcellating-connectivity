@@ -1,3 +1,6 @@
+% Computes sum of log-likelihood terms for given sufficient statistics (in Nx3
+%   matrix, with columns [count, mean, sum of squared dev]) and vectorized
+%   hyperparameters
 function i = ChooseFromLP(lp)
 
 max_lp = max(lp);

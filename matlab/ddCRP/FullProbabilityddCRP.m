@@ -1,3 +1,9 @@
+% Compute full probability of a given parcellation of D, specified both in terms
+%   of voxel links c and list of arrays of element indices "parcels".
+%   Hyperparmeters as specified as alpha and vectorized hyp, and whether D is
+%   symmetric is given by the boolean sym.
+%   Note that this is very slow for large matrices, and should only be used
+%   during initialization - the likelihood is updated incrementally during inference
 function logp = FullProbabilityddCRP(D, c, parcels, alpha, hyp, sym)
 
     if (sym)

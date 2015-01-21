@@ -1,3 +1,4 @@
+% Compute normalized mutual information between two parcellations gt_z and z
 function NMI = CalcNMI(gt_z, z)
 
 N = length(gt_z);
