@@ -6,40 +6,24 @@
 %   be saved every stats_interval iterations, and will be printed to the console
 %   if verbose is True. The MAP parcellation and diagnostic information is
 %   returned.
-function [map_z stats pair_prob] = ddCRP(D, adj_list, ...
-                                    init_c, const_c, gt_z, ...
-                                    num_passes, alpha, kappa, nu, sigsq, ...
-                                    burn_in_passes, ...
-                                    stats_interval, verbose)
+function [map_z stats] = ddCRP(D, adj_list, init_c, gt_z, num_passes, ...
+                          alpha, kappa, nu, sigsq, stats_interval, verbose)
 
 hyp = ComputeCachedLikelihoodTerms(kappa, nu, sigsq);
-pid = randi(10000);
 nvox = length(adj_list);
 
-if (isempty(const_c))
-    const_c = zeros(nvox, 1);
-end
-
-if (isempty(init_c))
-    init_c = zeros(nvox, 1);
-end
-
-if (~isempty(burn_in_passes))
-    pair_prob = zeros(1,nvox*(nvox-1)/2);
-end
-
 % Generate random initialization if not specified
-c = const_c;
-for i = find(const_c==0)'
-    if (init_c(i) == 0)
+if (isempty(init_c))
+    c = zeros(nvox, 1);
+    for i = 1:nvox
         neighbors = [adj_list{i} i];
         c(i) = neighbors(randi(length(neighbors)));
-    else
-        c(i) = init_c(i);
     end
+else
+    c = init_c;
 end
 
-% Generate random initialization if not specified
+% Initialize spatial connection matrix
 G = sparse(1:nvox,c,1,nvox,nvox);
 [K, z, parcels] = ConnectedComp(G);
 
@@ -55,8 +39,7 @@ t0 = tic;
 steps = 0;
 for pass = 1:num_passes
     % Visit elements randomly
-    nonconst_vox = find(const_c==0);
-    order = nonconst_vox(randperm(length(nonconst_vox)))';
+    order = randperm(nvox);
     
     for i = order
         if (curr_lp > max_lp)
@@ -64,13 +47,9 @@ for pass = 1:num_passes
             map_z = z;
         end
         
-        if (~isempty(burn_in_passes) && pass > burn_in_passes)
-            pair_prob = pair_prob + (1 - pdist(z', 'hamming'));
-        end
-        
         if (mod(steps, stats_interval) == 0)
             stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, ...
-                                       map_z, pid, verbose);
+                                       map_z, verbose);
         end
         
         % Compute change in log-prob when removing the edge c_i
@@ -130,12 +109,7 @@ for pass = 1:num_passes
     end
 end
 
-stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, pid, verbose);
-if (~isempty(burn_in_passes))
-    pair_prob = pair_prob / (sum(const_c==0)*(num_passes-burn_in_passes));
-else
-    pair_prob = [];
-end
+stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, verbose);
 
 end
 
@@ -268,7 +242,7 @@ end
 %   log-probability, current number of clusters, current parcellation z, current
 %   voxel links c, number of steps, ground truth (if available), best
 %   parcellation so far (map_z). If verbose=True, also print to console.
-function stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, pid, verbose)
+function stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, verbose)
     stats.lp = [stats.lp curr_lp];
     stats.K = [stats.K K];
     stats.z = [stats.z; z];
@@ -292,6 +266,4 @@ function stats = UpdateStats(stats, t0, curr_lp, K, z, c, steps, gt_z, map_z, pi
                   '  K: ' num2str(K)]);
         end
     end
-    save(['/data/supervoxel/output/temp/' num2str(pid) '.mat'], ...
-        'map_z', 'stats');
 end

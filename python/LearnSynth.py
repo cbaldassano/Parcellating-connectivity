@@ -16,7 +16,7 @@ SynthData = collections.namedtuple('SynthData',['D','adj_list','z','coords'])
 def LearnSynth(type):
     np.random.seed(1)   # For repeatability
     max_noise = 10;     # Number of noise levels to try
-    repeats = 20;       # Number of times to repeat experiments
+    repeats = 5;       # Number of times to repeat experiments
     
     WC = np.zeros((max_noise,repeats))
     DC = np.zeros((max_noise,repeats))
