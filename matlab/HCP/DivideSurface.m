@@ -46,22 +46,23 @@ end
 % colors = colors(randperm(size(colors,1),max_overlay),:);
 % colors = [0 0 0; 1 1 1; colors];
 % overlay = ConvertToOrigHem(overlay, orig_ind);
+% 
+% max_overlay = 0.25; %0.4; 
+% min_overlay = 0;% -0.08;
+% colors = PTcolormap(300, [min_overlay max_overlay]);
+%colors = [0 0 0; 1 1 1; PTcolormap(300, [min_overlay max_overlay])];
 
-% max_overlay = 1; %0.4; 
-% min_overlay = -1;% -0.08; 
-% colors = [0 0 0; 1 1 1; PTcolormap(300, [min_overlay max_overlay])];
+% cmap = PTPalette(10);
+% %cmap = cmap([2 3 4 6 7 8 9 5 10 1],:);
+% colors = [0 0 0; 1 1 1; cmap];
 
-cmap = PTPalette(10);
-%cmap = cmap([2 3 4 6 7 8 9 5 10 1],:);
-colors = [0 0 0; 1 1 1; cmap];
-
-% colors = BR2Dcmap(100);
-% %min1 = 12; max1 = 18;
-% %min2 = 12; max2 = 18;
-% min1 = 0; max1 = 1000;
-% min2 = 0; max2 = 1000;
-% overlay1 = ConvertToOrigHem(overlay(1,:), orig_ind);
-% overlay2 = ConvertToOrigHem(overlay(2,:), orig_ind);
+colors = BR2Dcmap(100);
+%min1 = 12; max1 = 18;
+%min2 = 12; max2 = 18;
+min1 = 0; max1 = 700;%1000;
+min2 = 0; max2 = 700;%1000;
+overlay1 = ConvertToOrigHem(overlay(1,:), orig_ind);
+overlay2 = ConvertToOrigHem(overlay(2,:), orig_ind);
 
 % Inspired by Guillaume Flandin <Guillaume@artefact.tk> http://www.artefact.tk/software/matlab/gifti/
 fid = fopen(surface_template_file);
@@ -103,20 +104,20 @@ for hem = 1:2
             continue;
         end
         
-        parcel_overlay = overlay{hem}(parcel_tri);
-        
-        %gives borders
-        parcel_overlay(~ismember(parcel_tri, orig_parcels{hem}{i})) = -1;
-
-%         parcel_overlay1 = overlay1{hem}(parcel_tri);
-%         parcel_overlay2 = overlay2{hem}(parcel_tri);
+%         parcel_overlay = overlay{hem}(parcel_tri);
 %         
 %         %gives borders
-%         parcel_overlay1(~ismember(parcel_tri, orig_parcels{hem}{i})) = -1;
+%         parcel_overlay(~ismember(parcel_tri, orig_parcels{hem}{i})) = -2;
+
+        parcel_overlay1 = overlay1{hem}(parcel_tri);
+        parcel_overlay2 = overlay2{hem}(parcel_tri);
+        
+        %gives borders
+        parcel_overlay1(~ismember(parcel_tri, orig_parcels{hem}{i})) = -1;
         
         fid = fopen([save_prefix '_' num2str(hem) '_' num2str(i) '_' overlay_suffix '.clrs'], 'w');
-        %for f = 1:size(parcel_overlay1,1)
-        for f = 1:size(parcel_overlay,1)
+        for f = 1:size(parcel_overlay1,1)
+        %for f = 1:size(parcel_overlay,1)
             for v = 1:3
 %                 if (~ismember(parcel_tri(f,v),orig_parcels{hem}{i}))
 %                    fprintf(fid, '0.000000 0.000000 0.000000\n');
@@ -127,23 +128,25 @@ for hem = 1:2
 %                     fprintf(fid, '%f %f %f\n', colors(ind,1), colors(ind,2), colors(ind,3));
 %                 end
 
-                 val = parcel_overlay(f,v) + 2;
-                 fprintf(fid, '%f %f %f\n', colors(val,1), colors(val,2), colors(val,3));
+%                  val = parcel_overlay(f,v) + 2;
+%                  fprintf(fid, '%f %f %f\n', colors(val,1), colors(val,2), colors(val,3));
                 
-%                if (parcel_overlay(f,v)==-1)
+%                if (parcel_overlay(f,v)==-2)
 %                    fprintf(fid, '0 0 0\n');
+%                elseif (parcel_overlay(f,v)==-1)
+%                    fprintf(fid, '0.5 0.5 0.5\n');
 %                else
-%                    ind = max(min(round((parcel_overlay(f,v)-min_overlay)/(max_overlay-min_overlay)*300) + 1, 300),1)+2;
+%                    ind = max(min(round((parcel_overlay(f,v)-min_overlay)/(max_overlay-min_overlay)*300) + 1, 300),1);
 %                    fprintf(fid, '%f %f %f\n', colors(ind,1), colors(ind,2), colors(ind,3));
 %                end
 
-%                if (parcel_overlay1(f,v)==-1)
-%                    fprintf(fid, '0 0 0\n');
-%                else
-%                    ind1 = max(min(round((parcel_overlay1(f,v)-min1)/(max1-min1)*100) + 1, 100),1);
-%                    ind2 = max(min(round((parcel_overlay2(f,v)-min2)/(max2-min2)*100) + 1, 100),1);
-%                    fprintf(fid, '%f %f %f\n', colors(ind1,ind2,1), colors(ind1,ind2,2), colors(ind1,ind2,3));
-%                end
+               if (parcel_overlay1(f,v)==-1)
+                   fprintf(fid, '0 0 0\n');
+               else
+                   ind1 = max(min(round((parcel_overlay1(f,v)-min1)/(max1-min1)*100) + 1, 100),1);
+                   ind2 = max(min(round((parcel_overlay2(f,v)-min2)/(max2-min2)*100) + 1, 100),1);
+                   fprintf(fid, '%f %f %f\n', colors(ind1,ind2,1), colors(ind1,ind2,2), colors(ind1,ind2,3));
+               end
 
 %                if (parcel_overlay(f,v) == 1)
 %                    fprintf(fid, '0.000000 0.000000 0.000000\n');
@@ -159,8 +162,8 @@ for hem = 1:2
             end
         end
         fclose(fid);
-        fprintf(fid_sizelist, '%d, ', 9*size(parcel_overlay,1));
-        %fprintf(fid_sizelist, '%d, ', 9*size(parcel_overlay1,1));
+        %fprintf(fid_sizelist, '%d, ', 9*size(parcel_overlay,1));
+        fprintf(fid_sizelist, '%d, ', 9*size(parcel_overlay1,1));
         
         continue;
         verts = unique(parcel_tri(:));

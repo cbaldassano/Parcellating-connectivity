@@ -16,6 +16,7 @@ PlotPaths(paths, RSC, group.Y,group.Ycol,3);
 scatter3(group.Y(paths(paths>0),1),group.Y(paths(paths>0),2),group.Y(paths(paths>0),3),50,group.Ycol(paths(paths>0),:),'filled');
 view(-20,31);
 set(gca,'XTickLabel',[]); set(gca,'YTickLabel',[]); set(gca,'ZTickLabel',[]);
+rgb2cm;
 
 figure('Color',[1 1 1],'Position',[676         340+1101/2        1393/2        1101/2]);
 for s = 1:20
@@ -23,6 +24,7 @@ for s = 1:20
     view(-20,31);
     set(gca,'XTickLabel',[]); set(gca,'YTickLabel',[]); set(gca,'ZTickLabel',[]);
 end
+rgb2cm;
 
 figure('Color',[1 1 1],'Position',[676+1393/2         340        1393/2        1101/2]);
 dorsalConnLeft = zeros(4,20);
@@ -31,17 +33,19 @@ for s = 1:20
     dorsalConnLeft(:,s) = subj.Csubj{s}(RSC(1),paths(1,:));
     dorsalConnRight(:,s) = subj.Csubj{s}(RSC(2),paths(2,:));
 end
-disp(['Sig thresh = ' num2str(0.05/3)]);
+
 disp('Dorsal: ');
 disp('   Left: ');
 for i = 1:3
+    t = tstat(dorsalConnLeft(i,:)-dorsalConnLeft(i+1,:));
     [~,p] = ttest(dorsalConnLeft(i,:),dorsalConnLeft(i+1,:));
-    disp(['      ' num2str(i) ' vs ' num2str(i+1) ': ' num2str(p)]);
+    disp(['      ' num2str(i) ' vs ' num2str(i+1) ': ' num2str(p) ', ' num2str(t)]);
 end
 disp('   Right: ');
 for i = 1:3
+    t = tstat(dorsalConnRight(i,:)-dorsalConnRight(i+1,:));
     [~,p] = ttest(dorsalConnRight(i,:),dorsalConnRight(i+1,:));
-    disp(['      ' num2str(i) ' vs ' num2str(i+1) ': ' num2str(p)]);
+    disp(['      ' num2str(i) ' vs ' num2str(i+1) ': ' num2str(p) ', ' num2str(t)]);
 end
 linecol = PTPalette(2);
 %plot(1:4,dorsalConnLeft,'Color',linecol(1,:),'LineWidth',1); hold on;
@@ -65,13 +69,15 @@ end
 disp('Ventral: ');
 disp('   Left: ');
 for i = 1:2
+     t = tstat(ventralConnLeft(i,:)-ventralConnLeft(i+1,:));
     [~,p] = ttest(ventralConnLeft(i,:),ventralConnLeft(i+1,:));
-    disp(['      ' num2str(i) ' vs ' num2str(i+1) ': ' num2str(p)]);
+    disp(['      ' num2str(i) ' vs ' num2str(i+1) ': ' num2str(p) ', ' num2str(t)]);
 end
 disp('   Right: ');
 for i = 1:2
+     t = tstat(ventralConnRight(i,:)-ventralConnRight(i+1,:));
     [~,p] = ttest(ventralConnRight(i,:),ventralConnRight(i+1,:));
-    disp(['      ' num2str(i) ' vs ' num2str(i+1) ': ' num2str(p)]);
+    disp(['      ' num2str(i) ' vs ' num2str(i+1) ': ' num2str(p) ', ' num2str(t)]);
 end
 linecol = PTPalette(2);
 %plot(1:3,ventralConnLeft,'Color',linecol(2,:),'LineWidth',1); hold on;
@@ -118,4 +124,8 @@ for i = 1:2
 end
 
 
+end
+
+function t = tstat(x)
+t = mean(x)/(std(x)/sqrt(length(x)));
 end

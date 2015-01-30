@@ -13,7 +13,7 @@ kappa=0.0001;
 nu=1;
 sigsq = 0.01;
 pass_limit = 100;%30;
-repeats = 20;   % Number of times to repeat experiments
+repeats = 2;   % Number of times to repeat experiments
 
 synth_sig = linspace(0,9,10);   % Noise levels to try
 num_noise = length(synth_sig);
